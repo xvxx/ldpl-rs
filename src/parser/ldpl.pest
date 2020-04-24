@@ -71,7 +71,7 @@ program = _{
  * DATA:
  */
 
-data_section = {
+data_section = _{
     ^"DATA:" ~ "\n"+
     ~ (type_def ~ "\n"+)*
 }
@@ -80,13 +80,13 @@ data_section = {
  * PROCEDURE:
  */
 
-proc_stmt = _{
+proc_stmt = {
     create_stmt_stmt |
     sub_def_stmt |
     subproc_stmt
 }
 
-subproc_stmt = _{
+subproc_stmt = {
     if_stmt
     | else_stmt
     | while_stmt
