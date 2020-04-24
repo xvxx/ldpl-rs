@@ -4,8 +4,8 @@ digit = { ASCII_DIGIT }
 WHITESPACE = _{ " " | "\t" | "\r" }
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 
-// ident: name
-ident = @{ alpha ~ (!banned ~ ANY)* }
+// variable: name, something.with.dots, etc
+var = @{ alpha ~ (!banned ~ ANY)* }
 
 // https://docs.ldpl-lang.org/naming/
 banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
@@ -24,14 +24,17 @@ char = {
     | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
 }
 
-// var expression
-expr = _{ text | number | ident }
-numvar = { number | ident }
-txtvar = { text | ident }
+// expressions
+expr = _{ text | number | var }
+expr_list = @{ expr ~ (" " ~ expr)* }
 
 // statements
 stmt = _{
     expr
+}
+
+stmt_list = _{
+    (stmt ~ "\n"+)+
 }
 
 // whole thing
@@ -42,3 +45,128 @@ program = _{
     ~ stmt?
     ~ EOI
 }
+
+
+/** LDPL 4.4 STATEMENTS **/
+
+// FLOW
+
+if_stmt = {
+    ^"IF" ~ test_expr ~ ^"THEN" ~ "\n" ~ (stmt_list | else_stmt)* ~ ^"END IF"
+}
+else_stmt = {
+    ^"ELSE IF" ~ test_expr ~ ^"\n" |
+    ^"ELSE" ~ ^"\n^"
+}
+
+while_stmt = {
+    ^"WHILE" ~ test_expr ~ ^"DO" ~ ^"\n^"
+    ~ (stmt_list | loop_kw_stmt)
+    ~ ^"REPEAT^"
+}
+
+for_each_stmt = {
+    ^"FOR EACH" ~ var ~ ^"IN" ~ expr ~ ^"DO" ~ ^"\n^"
+    ~ (stmt_list | loop_kw_stmt)
+    ~ ^"REPEAT^"
+}
+
+for_stmt = {
+    ^"FOR" ~ var ~ ^"FROM" ~ expr ~ ^"TO" ~ expr ~ ^"STEP" ~ expr ~ ^"DO" ~ ^"\n"
+    ~ (stmt_list | loop_kw_stmt)
+    ~ ^"REPEAT^"
+}
+
+test_expr = {
+    expr
+    ~ (
+    ^"IS EQUAL TO" |
+    ^"IS NOT EQUAL TO" |
+    ^"IS GREATER THAN" |
+    ^"IS LESS THAN" |
+    ^"IS GREATER THAN OR EQUAL TO" |
+    ^"IS LESS THAN OR EQUAL TO"
+    )
+    ~
+    expr
+}
+
+loop_kw_stmt = { ^"BREAK" | ^"CONTINUE" }
+return_stmt = { ^"RETURN" }
+goto_stmt = { ^"GOTO" ~ var }
+label_stmt = { ^"LABEL" ~ var }
+store_stmt = { ^"STORE" ~ expr ~ ^"IN" ~ var }
+exit_stmt = { ^"EXIT" }
+wait_stmt = { ^"WAIT" ~ expr ~ ^"MILLISECONDS" }
+create_stmt_stmt = { ^"CREATE" ~ ^"STATEMENT" ~ expr ~ ^"EXECUTING" ~ var }
+
+call_stmt = _{ call_external_stmt | call_sub_stmt }
+call_external_stmt = { ^"CALL EXTERNAL" ~ var ~ (^"WITH" ~ expr_list)? }
+call_sub_stmt = { ^"CALL" ~ var ~ (^"WITH" ~ expr_list)? }
+
+// MATH
+
+math_op = { ^"+" | ^"-" | ^"*" | ^"/" | ^"^" }
+solve_expr = { (^"(" | ^")" | number | math_op)+ }
+solve_stmt = { ^"IN" ~ var ~ ^"SOLVE" ~ solve_expr }
+
+floor_stmt = { ^"FLOOR" ~ expr }
+floor_in_stmt = { ^"FLOOR" ~ expr ~ ^"IN" ~ var }
+ceil_stmt = { ^"CEIL" ~ expr }
+ceil_in_stmt = { ^"CEIL" ~ expr ~ ^"IN" ~ var }
+mod_by_stmt = { ^"MODULE" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
+get_rand_stmt = { ^"GET" ~ ^"RANDOM" ~ ^"IN" ~ var }
+raise_stmt = { ^"RAISE" ~ expr ~ ^"TO" ~ ^"THE" ~ expr ~ ^"IN" ~ var }
+log_stmt = { ^"LOG" ~ expr ~ ^"IN" ~ var }
+sin_stmt = { ^"SIN" ~ expr ~ ^"IN" ~ var }
+cos_stmt = { ^"COS" ~ expr ~ ^"IN" ~ var }
+tan_stmt = { ^"TAN" ~ expr ~ ^"IN" ~ var }
+
+// TEXT
+
+join_stmt = { ^"IN" ~ var ~ ^"JOIN" ~ expr_list }
+replace_stmt = { ^"REPLACE" ~ expr ~ ^"FROM" ~ expr ~ ^"WITH" ~ expr ~ ^"IN" ~ var }
+split_stmt = { ^"SPLIT" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
+get_char_stmt = { ^"GET" ~ ^"CHARACTER" ~ ^"AT" ~ expr ~ ^"FROM" ~ expr ~ ^"IN" ~ var }
+get_ascii_stmt = { ^"GET" ~ ^"ASCII" ~ ^"CHARACTER" ~ expr ~ ^"IN" ~ var }
+get_char_code_stmt = { ^"GET" ~ ^"CHARACTER" ~ ^"CODE" ~ ^"OF" ~ expr ~ ^"IN" ~ var }
+store_quote_stmt = { ^"STORE" ~ ^"QUOTE" ~ expr ~ ^"IN" ~ var }
+get_index_stmt = { ^"GET" ~ ^"INDEX" ~ ^"OF" ~ expr ~ ^"FROM" ~ expr ~ ^"IN" ~ var }
+count_stmt = { ^"COUNT" ~ expr ~ ^"FROM" ~ expr ~ ^"IN" ~ var }
+substr_stmt = { ^"SUBSTRING" ~ expr ~ ^"FROM" ~ expr ~ ^"LENGTH" ~ expr ~ ^"IN" ~ var }
+trim_stmt = { ^"TRIM" ~ expr ~ ^"IN" ~ var }
+
+// TEXT & LIST
+
+get_length_stmt = { ^"GET" ~ ^"LENGTH" ~ ^"OF" ~ expr ~ ^"IN" ~ var }
+
+// LIST
+
+push_stmt = { ^"PUSH" ~ expr ~ ^"TO" ~ expr }
+delete_stmt = { ^"DELETE" ~ ^"LAST" ~ ^"ELEMENT" ~ ^"OF" ~ expr }
+
+// LIST & MAP
+
+clear_stmt = { ^"CLEAR" ~ expr }
+copy_stmt = { ^"COPY" ~ expr ~ ^"TO" ~ var }
+
+// MAP
+
+get_keys_count_stmt = { ^"GET" ~ ^"KEY" ~ ^"COUNT" ~ ^"OF" ~ expr ~ ^"IN" ~ var }
+get_keys_stmt = { ^"GET" ~ ^"KEYS" ~ ^"OF" ~ expr ~ ^"IN" ~ var }
+
+// IO
+
+display_stmt = { ^"DISPLAY" ~ expr_list }
+load_stmt = { ^"LOAD" ~ ^"FILE" ~ expr ~ ^"IN" ~ var }
+write_stmt = { ^"WRITE" ~ expr ~ ^"TO" ~ ^"FILE" ~ expr }
+append_stmt = { ^"APPEND" ~ expr ~ ^"TO" ~ ^"FILE" ~ expr }
+
+accept_stmt = _{ accept_eof_stmt | accept_var_stmt }
+accept_var_stmt = { ^"ACCEPT" ~ var }
+accept_eof_stmt = { ^"ACCEPT" ~ var ~ ^"UNTIL" ~ ^"EOF" }
+
+execute_stmt = _{ execute_exit_code_stmt | execute_output_stmt | execute_expr_stmt }
+execute_expr_stmt = { ^"EXECUTE" ~ expr }
+execute_output_stmt = { ^"EXECUTE" ~ expr ~ ^"AND" ~ ^"STORE" ~ ^"OUTPUT" ~ ^"IN" ~ var }
+execute_exit_code_stmt = { ^"EXECUTE" ~ expr ~ ^"AND" ~ ^"STORE" ~ ^"EXIT" ~ ^"CODE" ~ ^"IN" ~ var }
