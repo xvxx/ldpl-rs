@@ -1,4 +1,6 @@
-/** BASICS **/
+/*
+ * BASICS
+ */
 
 // atoms
 alpha = { ASCII_ALPHA | "_" }
@@ -56,7 +58,9 @@ program = _{
     ~ EOI
 }
 
-/** SECTIONS **/
+/*
+ * SECTIONS
+ */
 
 basic_type = {
     ^"NUMBER LIST" |
@@ -78,7 +82,9 @@ data_section = {
 
 proc_header = { ^"PROCEDURE:" }
 
-/** LDPL 4.4 STATEMENTS **/
+/*
+ * LDPL 4.4 STATEMENTS
+ */
 
 // FLOW
 
