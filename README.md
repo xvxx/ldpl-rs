@@ -1,8 +1,8 @@
-# ldpl-rs
+<img src="img/ldpl-rs.png" alt="LDPL + Rust" align="right">
 
-An experimental [LDPL 4.4][ldpl] compiler written in Rust.
+# LDPL in Rust
 
-Uses [pest] for parsing.
+_An experimental [LDPL 4.4][ldpl] compiler written in Rust._
 
 [ldpl]: https://www.ldpl-lang.org/
 [pest]: https://pest.rs/
