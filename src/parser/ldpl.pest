@@ -50,7 +50,11 @@ basic_type = {
     ^"TEXT MAP" |
     ^"TEXT"
 }
-type_name = @{ basic_type }
+old_type = {
+    ^"NUMBER VECTOR" |
+    ^"TEXT VECTOR"
+}
+type_name = @{ old_type | basic_type }
 type_def = { ident ~ ^"IS" ~ type_name }
 
 // whole thing
@@ -93,6 +97,7 @@ subproc_stmt = {
     | for_each_stmt
     | for_stmt
     | return_stmt
+    | loop_kw_stmt
     | goto_stmt
     | label_stmt
     | store_stmt
@@ -100,6 +105,7 @@ subproc_stmt = {
     | wait_stmt
     | call_stmt
     | solve_stmt
+    | modulo_stmt
     | floor_stmt
     | ceil_stmt
     | mod_by_stmt
@@ -110,6 +116,7 @@ subproc_stmt = {
     | cos_stmt
     | tan_stmt
     | join_stmt
+    | old_join_stmt
     | replace_stmt
     | split_stmt
     | get_char_stmt
@@ -166,7 +173,7 @@ if_stmt = {
     ~ "\n"+
     ~ (subproc_stmt ~ "\n"+ | else_stmt ~ "\n"+)*
     ~ "\n"*
-    ~ ^"END IF"
+    ~ (^"END" ~ ^"IF" | ^"END-IF")
 }
 else_stmt = {
     ^"ELSE" ~ ^"IF" ~ test_expr ~ ^"THEN" |
@@ -178,33 +185,38 @@ while_stmt = {
     ~ test_expr
     ~ ^"DO"
     ~ "\n"+
-    ~ (subproc_stmt ~ "\n"+ | loop_kw_stmt ~ "\n"+)*
+    ~ (subproc_stmt ~ "\n"+)*
     ~ "\n"*
     ~ ^"REPEAT"
 }
 
 for_each_stmt = {
     ^"FOR EACH" ~ ident ~ ^"IN" ~ expr ~ ^"DO" ~ "\n"
-    ~ (subproc_stmt ~ "\n"+ | loop_kw_stmt ~ "\n"+)*
+    ~ (subproc_stmt ~ "\n"+)*
     ~ "\n"*
     ~ ^"REPEAT"
 }
 
 for_stmt = {
     ^"FOR" ~ ident ~ ^"FROM" ~ expr ~ ^"TO" ~ expr ~ ^"STEP" ~ expr ~ ^"DO" ~ "\n"
-    ~ (subproc_stmt ~ "\n"+ | loop_kw_stmt ~ "\n"+)*
+    ~ (subproc_stmt ~ "\n"+)*
     ~ "\n"*
     ~ ^"REPEAT"
 }
 
 test_expr = {
+    one_test_expr ~ ^"OR" ~ test_expr
+    | one_test_expr ~ ^"AND" ~ test_expr
+    | one_test_expr
+}
+one_test_expr = {
     expr ~ (
     ^"IS" ~ ^"EQUAL" ~ ^"TO" |
     ^"IS" ~ ^"NOT" ~ ^"EQUAL" ~ ^"TO" |
-    ^"IS" ~ ^"GREATER" ~ ^"THAN" |
-    ^"IS" ~ ^"LESS" ~ ^"THAN" |
     ^"IS" ~ ^"GREATER" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO" |
-    ^"IS" ~ ^"LESS" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO"
+    ^"IS" ~ ^"GREATER" ~ ^"THAN" |
+    ^"IS" ~ ^"LESS" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO" |
+    ^"IS" ~ ^"LESS" ~ ^"THAN"
     )
     ~ expr
 }
@@ -226,8 +238,10 @@ call_sub_stmt = { ^"CALL" ~ var ~ (^"WITH" ~ expr_list)? }
 // MATH
 
 math_op = { "+" | "-" | "*" | "/" | "^" }
-solve_expr = { ("(" | ")" | number | ident | math_op)+ }
+solve_expr = { ("(" | ")" | number | var | math_op)+ }
 solve_stmt = { ^"IN" ~ var ~ ^"SOLVE" ~ solve_expr }
+
+modulo_stmt = { ^"MODULO" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
 
 floor_stmt = { floor_in_stmt | floor_expr_stmt }
 floor_expr_stmt = { ^"FLOOR" ~ expr }
@@ -248,6 +262,7 @@ tan_stmt = { ^"TAN" ~ expr ~ ^"IN" ~ var }
 // TEXT
 
 join_stmt = { ^"IN" ~ var ~ ^"JOIN" ~ expr_list }
+old_join_stmt = { ^"JOIN" ~ expr ~ ^"AND" ~ expr ~ ^"IN" ~ var }
 replace_stmt = { ^"REPLACE" ~ expr ~ ^"FROM" ~ expr ~ ^"WITH" ~ expr ~ ^"IN" ~ var }
 split_stmt = { ^"SPLIT" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
 get_char_stmt = { ^"GET" ~ ^"CHARACTER" ~ ^"AT" ~ expr ~ ^"FROM" ~ expr ~ ^"IN" ~ var }
