@@ -1,7 +1,8 @@
 use ldpl::parser::{LDPLParser, Parser, Rule};
 
 fn main() {
-    let pairs = LDPLParser::parse(Rule::ident_list, "a1 b2").unwrap();
+    // let pairs = LDPLParser::parse(Rule::program, r#"hi mrs mom"#).unwrap();
+    let pairs = LDPLParser::parse(Rule::program, "123\nhi").unwrap();
 
     // Because ident_list is silent, the iterator will contain idents
     for pair in pairs {
@@ -15,7 +16,8 @@ fn main() {
             match inner_pair.as_rule() {
                 Rule::alpha => println!("Letter:  {}", inner_pair.as_str()),
                 Rule::digit => println!("Digit:   {}", inner_pair.as_str()),
-                _ => unreachable!(),
+                Rule::ident => println!("Ident:   {}", inner_pair.as_str()),
+                rule => println!("{:?}:   {}", rule, inner_pair.as_str()),
             };
         }
     }

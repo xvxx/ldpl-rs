@@ -1,9 +1,42 @@
+// basics
+alpha = { ASCII_ALPHA | "_" }
+digit = { ASCII_DIGIT }
+WHITESPACE = _{ " " | "\t" }
+COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 
-alpha = { 'a'..'z' | 'A'..'Z' }
-digit = { '0'..'9' }
+// ident: name
+ident = @{ alpha ~ (digit | alpha)* }
 
-ident = { (alpha | digit)+ }
+// https://docs.ldpl-lang.org/naming/
+banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
 
-ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
-          // ^
-          // ident_list rule is silent which means it produces no tokens
+// number: -3.14
+sign = { "+" | "-" }
+number = @{ sign? ~ digit+ ~ ("." ~ digit+)? }
+number_list = @{ number ~ (" " ~ number)* }
+
+// text: "Something something."
+text = ${ "\"" ~ text_inner ~ "\"" }
+text_inner = @{ char* }
+char = {
+    !("\"" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "e")
+    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+
+// var expression
+expr = { text | number | ident }
+
+// statements
+stmt = _{
+    expr
+}
+
+// whole thing
+program = _{
+    SOI
+    ~ "\n"*
+    ~ (stmt ~ "\n"+) *
+    ~ stmt?
+    ~ EOI
+}
