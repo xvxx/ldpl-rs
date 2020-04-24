@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["chris west <c@xvxx.io>"]
 edition = "2018"
 
+[[bin]]
+name = "ldpl-rs"
+path = "src/main.rs"
+
 [dependencies]
 pest = "2.0"
 pest_derive = "2.0"
