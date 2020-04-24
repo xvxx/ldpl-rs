@@ -56,23 +56,23 @@ fn test_text() {
 }
 
 #[test]
-fn test_ident() {
+fn test_var() {
     let node = parse_one!(r#"somevar"#);
-    assert_eq!(Rule::ident, node.as_rule());
+    assert_eq!(Rule::var, node.as_rule());
     assert_eq!("somevar", node.as_str());
 
     let node = parse_one!(r#"some-other-var"#);
-    assert_eq!(Rule::ident, node.as_rule());
+    assert_eq!(Rule::var, node.as_rule());
     assert_eq!("some-other-var", node.as_str());
 
     let node = parse_one!(r#"dots.in.var.name"#);
-    assert_eq!(Rule::ident, node.as_rule());
+    assert_eq!(Rule::var, node.as_rule());
     assert_eq!("dots.in.var.name", node.as_str());
 
     let node = parse_one!(r#"_start_with_underbar"#);
-    assert_eq!(Rule::ident, node.as_rule());
+    assert_eq!(Rule::var, node.as_rule());
     assert_eq!("_start_with_underbar", node.as_str());
 
     let err = parse_err!(r#".cant_start_with_dot"#);
-    assert_eq!(err.to_string(), " --> 1:1\n  |\n1 | .cant_start_with_dot\n  | ^---\n  |\n  = expected EOI, ident, number, or text".to_string());
+    assert_eq!(err.to_string(), " --> 1:1\n  |\n1 | .cant_start_with_dot\n  | ^---\n  |\n  = expected EOI, var, number, or text".to_string());
 }
