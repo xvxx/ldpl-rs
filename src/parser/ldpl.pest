@@ -4,12 +4,6 @@ digit = { ASCII_DIGIT }
 WHITESPACE = _{ " " | "\t" | "\r" }
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 
-// variable: name, something.with.dots, etc
-var = @{ alpha ~ (!banned ~ ANY)* }
-
-// https://docs.ldpl-lang.org/naming/
-banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
-
 // number: -3.14
 sign = { "+" | "-" }
 number = @{ sign? ~ digit+ ~ ("." ~ digit+)? }
@@ -24,8 +18,20 @@ char = {
     | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
 }
 
+// variable: name, something.with.dots, person:"Name", etc
+var = { lookup | ident }
+ident = @{ alpha ~ (!banned ~ ANY)* }
+
+// https://docs.ldpl-lang.org/naming/
+banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
+
+// lookup: person:"Name"
+lookup = {
+    ident ~ (":" ~ ( text | number | ident))+
+}
+
 // expressions
-expr = _{ text | number | var }
+expr = _{ var | number | text }
 expr_list = @{ expr ~ (" " ~ expr)* }
 
 // statements

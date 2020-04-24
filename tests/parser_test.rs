@@ -56,6 +56,35 @@ fn test_text() {
 }
 
 #[test]
+fn test_lookup() {
+    let node = parse_one!("abc:5");
+    assert_eq!(Rule::var, node.as_rule());
+    assert_eq!("abc:5", node.as_str());
+
+    let node = parse_one!(r#"person:"name""#);
+    assert_eq!(Rule::var, node.as_rule());
+    assert_eq!(r#"person:"name""#, node.as_str());
+
+    let node = parse_one!(r#"people:500"#);
+    assert_eq!(Rule::var, node.as_rule());
+    assert_eq!(r#"people:500"#, node.as_str());
+
+    let node = parse_one!(r#"nested:50:20:30"#);
+    assert_eq!(Rule::var, node.as_rule());
+    assert_eq!(r#"nested:50:20:30"#, node.as_str());
+
+    let node = parse_one!(r#"nested-map:"ages":20:"year""#);
+    assert_eq!(Rule::var, node.as_rule());
+    assert_eq!(r#"nested-map:"ages":20:"year""#, node.as_str());
+    let mut parts = vec!["nested-map", "\"ages\"", "20", "\"year\""];
+    for lookup in node.into_inner() {
+        for part in lookup.into_inner() {
+            assert_eq!(part.as_str(), parts.remove(0));
+        }
+    }
+}
+
+#[test]
 fn test_var() {
     let node = parse_one!(r#"somevar"#);
     assert_eq!(Rule::var, node.as_rule());
@@ -74,5 +103,5 @@ fn test_var() {
     assert_eq!("_start_with_underbar", node.as_str());
 
     let err = parse_err!(r#".cant_start_with_dot"#);
-    assert_eq!(err.to_string(), " --> 1:1\n  |\n1 | .cant_start_with_dot\n  | ^---\n  |\n  = expected EOI, var, number, or text".to_string());
+    assert_eq!(err.to_string(), " --> 1:1\n  |\n1 | .cant_start_with_dot\n  | ^---\n  |\n  = expected EOI, number, text, or var".to_string());
 }
