@@ -22,21 +22,33 @@ char = {
     | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
 }
 
-// variable: name, something.with.dots, person:"Name", etc
-var = { lookup | ident }
+// ident: name, something.with.dots, etc
 ident = @{ alpha ~ (!banned ~ ANY)* }
-
-// https://docs.ldpl-lang.org/naming/
-banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
+banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"} // https://docs.ldpl-lang.org/naming/
 
 // lookup: person:"Name", list:5, etc
-lookup = {
-    ident ~ (":" ~ ( text | number | ident))+
-}
+lookup = { ident ~ (":" ~ ( text | number | ident))+ }
 
-// expressions
+// variable: name, something.with.dots, person:"Name", etc
+var = { lookup | ident }
+
+// expressions are either variables, text, or numbers.
 expr = _{ var | number | text }
+
+// expr list: one two "three" 4 5 "six"
 expr_list = @{ expr ~ (" " ~ expr)* }
+
+// types TODO: x OF y..
+basic_type = {
+    ^"NUMBER LIST" |
+    ^"NUMBER MAP" |
+    ^"NUMBER" |
+    ^"TEXT LIST" |
+    ^"TEXT MAP" |
+    ^"TEXT"
+}
+type_name = @{ basic_type }
+type_def = { (ident ~ ^"IS" ~ type_name ~ "\n") }
 
 // statements
 stmt = _{
@@ -55,29 +67,14 @@ program = _{
     ~ data_section?
     ~ "\n"*
     ~ (^"PROCEDURE:" ~ "\n"+)?
-    ~ (stmt ~ "\n"+) *
+    ~ (stmt ~ "\n"+)*
     ~ stmt?
     ~ EOI
 }
 
 /*
- * SECTIONS
+ * DATA:
  */
-
-basic_type = {
-    ^"NUMBER LIST" |
-    ^"NUMBER MAP" |
-    ^"NUMBER" |
-    ^"TEXT LIST" |
-    ^"TEXT MAP" |
-    ^"TEXT"
-}
-
-type_name = @{ basic_type }
-
-type_def = {
-    (ident ~ ^"IS" ~ type_name ~ "\n")
-}
 
 data_section = {
     ^"DATA:"
@@ -102,7 +99,7 @@ sub_def = {
 }
 
 /*
- * LDPL 4.4 STATEMENTS
+ * LDPL 4.4 PROCEDURE: STATEMENTS
  */
 
 // FLOW
