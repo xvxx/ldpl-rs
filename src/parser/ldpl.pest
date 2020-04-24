@@ -50,6 +50,8 @@ stmt_list = _{
 program = _{
     SOI
     ~ "\n"*
+    ~ (^"INCLUDE" ~ text ~ "\n")*
+    ~ "\n"*
     ~ data_section?
     ~ "\n"*
     ~ (^"PROCEDURE:" ~ "\n"+)?
@@ -73,14 +75,31 @@ basic_type = {
 
 type_name = @{ basic_type }
 
+type_def = {
+    (ident ~ ^"IS" ~ type_name ~ "\n")
+}
+
 data_section = {
     ^"DATA:"
     ~ "\n"+
-    ~ (ident ~ ^"IS" ~ type_name ~ "\n")+
+    ~ type_def+
     ~ "\n"+
 }
 
-proc_header = { ^"PROCEDURE:" }
+/*
+ * SUB-PROCEDURES
+ */
+
+sub_def = {
+    (^"SUB-PROCEDURE" | ^"SUB")
+    ~ ident
+    ~ "\n"+
+    ~ (^"PARAMETERS:" ~ "\n"+ ~ type_def+)?
+    ~ (^"LOCAL DATA:" ~ "\n"+ ~ type_def+)?
+    ~ ^"PROCEDURE:"?
+    ~ (stmt ~ "\n"+)*
+    ~ (^"END SUB-PROCEDURE" | ^"END SUB")
+}
 
 /*
  * LDPL 4.4 STATEMENTS
