@@ -2,13 +2,7 @@
 
 An experimental [LDPL 4.4][ldpl] compiler written in Rust.
 
-TOKENS:
-
-- [ ] NUMBER
-- [ ] TEXT
-- [ ] VAR
-- [ ] LIST LOOKUP
-- [ ] MAP LOOKUP
+Uses [pest] for parsing.
 
 SECTIONS:
 
@@ -43,5 +37,5 @@ PROCEDURE:
 
 ## FLOW
 
-
 [ldpl]: https://www.ldpl-lang.org/
+[pest]: https://pest.rs/

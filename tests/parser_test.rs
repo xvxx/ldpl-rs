@@ -103,5 +103,5 @@ fn test_var() {
     assert_eq!("_start_with_underbar", node.as_str());
 
     let err = parse_err!(r#".cant_start_with_dot"#);
-    assert_eq!(err.to_string(), " --> 1:1\n  |\n1 | .cant_start_with_dot\n  | ^---\n  |\n  = expected EOI, number, text, or var".to_string());
+    assert_eq!(err.to_string(), " --> 1:1\n  |\n1 | .cant_start_with_dot\n  | ^---\n  |\n  = expected EOI, number, text, var, or data_section".to_string());
 }

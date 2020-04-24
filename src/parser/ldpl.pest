@@ -1,4 +1,6 @@
-// basics
+/** BASICS **/
+
+// atoms
 alpha = { ASCII_ALPHA | "_" }
 digit = { ASCII_DIGIT }
 WHITESPACE = _{ " " | "\t" | "\r" }
@@ -25,7 +27,7 @@ ident = @{ alpha ~ (!banned ~ ANY)* }
 // https://docs.ldpl-lang.org/naming/
 banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
 
-// lookup: person:"Name"
+// lookup: person:"Name", list:5, etc
 lookup = {
     ident ~ (":" ~ ( text | number | ident))+
 }
@@ -38,7 +40,6 @@ expr_list = @{ expr ~ (" " ~ expr)* }
 stmt = _{
     expr
 }
-
 stmt_list = _{
     (stmt ~ "\n"+)+
 }
@@ -47,11 +48,35 @@ stmt_list = _{
 program = _{
     SOI
     ~ "\n"*
+    ~ data_section?
+    ~ "\n"*
+    ~ (^"PROCEDURE:" ~ "\n"+)?
     ~ (stmt ~ "\n"+) *
     ~ stmt?
     ~ EOI
 }
 
+/** SECTIONS **/
+
+basic_type = {
+    ^"NUMBER LIST" |
+    ^"NUMBER MAP" |
+    ^"NUMBER" |
+    ^"TEXT LIST" |
+    ^"TEXT MAP" |
+    ^"TEXT"
+}
+
+type_name = @{ basic_type }
+
+data_section = {
+    ^"DATA:"
+    ~ "\n"+
+    ~ (ident ~ ^"IS" ~ type_name ~ "\n")+
+    ~ "\n"+
+}
+
+proc_header = { ^"PROCEDURE:" }
 
 /** LDPL 4.4 STATEMENTS **/
 
