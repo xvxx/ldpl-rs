@@ -1,6 +1,6 @@
 # ldpl-rs
 
-An LDPL 4.4 compiler written in Rust.
+An experimental LDPL 4.4 compiler written in Rust.
 
 TOKENS:
 

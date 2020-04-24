@@ -5,7 +5,7 @@ WHITESPACE = _{ " " | "\t" | "\r" }
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 
 // ident: name
-ident = @{ alpha ~ (digit | alpha)* }
+ident = @{ alpha ~ (!banned ~ ANY)* }
 
 // https://docs.ldpl-lang.org/naming/
 banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
