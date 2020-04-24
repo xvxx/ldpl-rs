@@ -1,7 +1,7 @@
 // basics
 alpha = { ASCII_ALPHA | "_" }
 digit = { ASCII_DIGIT }
-WHITESPACE = _{ " " | "\t" }
+WHITESPACE = _{ " " | "\t" | "\r" }
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 
 // ident: name
@@ -25,7 +25,9 @@ char = {
 }
 
 // var expression
-expr = { text | number | ident }
+expr = _{ text | number | ident }
+numvar = { number | ident }
+txtvar = { text | ident }
 
 // statements
 stmt = _{
