@@ -22,6 +22,9 @@ char = {
     | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
 }
 
+// linefeed: lf, crlf
+linefeed = { ^"LF" | ^"CRLF" }
+
 // ident: name, something.with.dots, etc
 ident = @{ alpha ~ (!banned ~ ANY)* }
 banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"} // https://docs.ldpl-lang.org/naming/
@@ -33,7 +36,7 @@ lookup = { ident ~ (":" ~ ( text | number | ident))+ }
 var = { lookup | ident }
 
 // expressions are either variables, text, or numbers.
-expr = _{ var | number | text }
+expr = _{ var | number | text | linefeed }
 
 // expr list: one two "three" 4 5 "six"
 expr_list = @{ expr ~ (" " ~ expr)* }
@@ -48,27 +51,19 @@ basic_type = {
     ^"TEXT"
 }
 type_name = @{ basic_type }
-type_def = { (ident ~ ^"IS" ~ type_name ~ "\n") }
-
-// statements
-stmt = _{
-    expr
-}
-stmt_list = _{
-    (stmt ~ "\n"+)+
-}
+type_def = { ident ~ ^"IS" ~ type_name }
 
 // whole thing
 program = _{
     SOI
     ~ "\n"*
-    ~ (^"INCLUDE" ~ text ~ "\n")*
+    ~ (^"INCLUDE" ~ text ~ "\n"+)*
     ~ "\n"*
     ~ data_section?
     ~ "\n"*
     ~ (^"PROCEDURE:" ~ "\n"+)?
-    ~ (stmt ~ "\n"+)*
-    ~ stmt?
+    ~ (proc_stmt ~ "\n"+)*
+    ~ proc_stmt?
     ~ EOI
 }
 
@@ -77,24 +72,84 @@ program = _{
  */
 
 data_section = {
-    ^"DATA:"
-    ~ "\n"+
-    ~ type_def+
-    ~ "\n"+
+    ^"DATA:" ~ "\n"+
+    ~ (type_def ~ "\n"+)*
 }
+
+/*
+ * PROCEDURE:
+ */
+
+proc_stmt = _{
+    create_stmt_stmt |
+    sub_def_stmt |
+    subproc_stmt
+}
+
+subproc_stmt = _{
+    if_stmt
+    | else_stmt
+    | while_stmt
+    | for_each_stmt
+    | for_stmt
+    | return_stmt
+    | goto_stmt
+    | label_stmt
+    | store_stmt
+    | exit_stmt
+    | wait_stmt
+    | call_stmt
+    | solve_stmt
+    | floor_stmt
+    | ceil_stmt
+    | mod_by_stmt
+    | get_rand_stmt
+    | raise_stmt
+    | log_stmt
+    | sin_stmt
+    | cos_stmt
+    | tan_stmt
+    | join_stmt
+    | replace_stmt
+    | split_stmt
+    | get_char_stmt
+    | get_ascii_stmt
+    | get_char_code_stmt
+    | store_quote_stmt
+    | get_index_stmt
+    | count_stmt
+    | substr_stmt
+    | trim_stmt
+    | get_length_stmt
+    | push_stmt
+    | delete_stmt
+    | clear_stmt
+    | copy_stmt
+    | get_keys_count_stmt
+    | get_keys_stmt
+    | display_stmt
+    | load_stmt
+    | write_stmt
+    | append_stmt
+    | accept_stmt
+    | execute_stmt
+}
+
 
 /*
  * SUB-PROCEDURES
  */
 
-sub_def = {
+sub_def_stmt = {
     (^"SUB-PROCEDURE" | ^"SUB")
     ~ ident
     ~ "\n"+
-    ~ (^"PARAMETERS:" ~ "\n"+ ~ type_def+)?
-    ~ (^"LOCAL DATA:" ~ "\n"+ ~ type_def+)?
+    ~ (^"PARAMETERS:" ~ "\n"+ ~ (type_def ~ "\n"+)+)?
+    ~ (^"LOCAL DATA:" ~ "\n"+ ~ (type_def ~ "\n"+)+)?
     ~ ^"PROCEDURE:"?
-    ~ (stmt ~ "\n"+)*
+    ~ "\n"*
+    ~ (subproc_stmt ~ "\n"+)*
+    ~ "\n"*
     ~ (^"END SUB-PROCEDURE" | ^"END SUB")
 }
 
@@ -105,68 +160,83 @@ sub_def = {
 // FLOW
 
 if_stmt = {
-    ^"IF" ~ test_expr ~ ^"THEN" ~ "\n" ~ (stmt_list | else_stmt)* ~ ^"END IF"
+    ^"IF"
+    ~ test_expr
+    ~ ^"THEN"
+    ~ "\n"+
+    ~ (subproc_stmt ~ "\n"+ | else_stmt ~ "\n"+)*
+    ~ "\n"*
+    ~ ^"END IF"
 }
 else_stmt = {
-    ^"ELSE IF" ~ test_expr ~ ^"\n" |
-    ^"ELSE" ~ ^"\n^"
+    ^"ELSE" ~ ^"IF" ~ test_expr ~ ^"THEN" |
+    ^"ELSE"
 }
 
 while_stmt = {
-    ^"WHILE" ~ test_expr ~ ^"DO" ~ ^"\n^"
-    ~ (stmt_list | loop_kw_stmt)
-    ~ ^"REPEAT^"
+    ^"WHILE"
+    ~ test_expr
+    ~ ^"DO"
+    ~ "\n"+
+    ~ (subproc_stmt ~ "\n"+ | loop_kw_stmt ~ "\n"+)*
+    ~ "\n"*
+    ~ ^"REPEAT"
 }
 
 for_each_stmt = {
-    ^"FOR EACH" ~ var ~ ^"IN" ~ expr ~ ^"DO" ~ ^"\n^"
-    ~ (stmt_list | loop_kw_stmt)
-    ~ ^"REPEAT^"
+    ^"FOR EACH" ~ ident ~ ^"IN" ~ expr ~ ^"DO" ~ "\n"
+    ~ (subproc_stmt ~ "\n"+ | loop_kw_stmt ~ "\n"+)*
+    ~ "\n"*
+    ~ ^"REPEAT"
 }
 
 for_stmt = {
-    ^"FOR" ~ var ~ ^"FROM" ~ expr ~ ^"TO" ~ expr ~ ^"STEP" ~ expr ~ ^"DO" ~ ^"\n"
-    ~ (stmt_list | loop_kw_stmt)
-    ~ ^"REPEAT^"
+    ^"FOR" ~ ident ~ ^"FROM" ~ expr ~ ^"TO" ~ expr ~ ^"STEP" ~ expr ~ ^"DO" ~ "\n"
+    ~ (subproc_stmt ~ "\n"+ | loop_kw_stmt ~ "\n"+)*
+    ~ "\n"*
+    ~ ^"REPEAT"
 }
 
 test_expr = {
-    expr
-    ~ (
-    ^"IS EQUAL TO" |
-    ^"IS NOT EQUAL TO" |
-    ^"IS GREATER THAN" |
-    ^"IS LESS THAN" |
-    ^"IS GREATER THAN OR EQUAL TO" |
-    ^"IS LESS THAN OR EQUAL TO"
+    expr ~ (
+    ^"IS" ~ ^"EQUAL" ~ ^"TO" |
+    ^"IS" ~ ^"NOT" ~ ^"EQUAL" ~ ^"TO" |
+    ^"IS" ~ ^"GREATER" ~ ^"THAN" |
+    ^"IS" ~ ^"LESS" ~ ^"THAN" |
+    ^"IS" ~ ^"GREATER" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO" |
+    ^"IS" ~ ^"LESS" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO"
     )
-    ~
-    expr
+    ~ expr
 }
 
 loop_kw_stmt = { ^"BREAK" | ^"CONTINUE" }
 return_stmt = { ^"RETURN" }
-goto_stmt = { ^"GOTO" ~ var }
-label_stmt = { ^"LABEL" ~ var }
+goto_stmt = { ^"GOTO" ~ ident }
+label_stmt = { ^"LABEL" ~ ident }
 store_stmt = { ^"STORE" ~ expr ~ ^"IN" ~ var }
 exit_stmt = { ^"EXIT" }
 wait_stmt = { ^"WAIT" ~ expr ~ ^"MILLISECONDS" }
-create_stmt_stmt = { ^"CREATE" ~ ^"STATEMENT" ~ expr ~ ^"EXECUTING" ~ var }
+create_stmt_stmt = { ^"CREATE" ~ ^"STATEMENT" ~ expr ~ ^"EXECUTING" ~ ident }
 
-call_stmt = _{ call_external_stmt | call_sub_stmt }
-call_external_stmt = { ^"CALL EXTERNAL" ~ var ~ (^"WITH" ~ expr_list)? }
+call_stmt = _{ call_external_stmt | call_verbose_stmt | call_sub_stmt }
+call_external_stmt = { ^"CALL" ~ ^"EXTERNAL" ~ var ~ (^"WITH" ~ expr_list)? }
+call_verbose_stmt = { ^"CALL" ~ ^"SUB-PROCEDURE" ~ var ~ (^"WITH" ~ expr_list)? }
 call_sub_stmt = { ^"CALL" ~ var ~ (^"WITH" ~ expr_list)? }
 
 // MATH
 
-math_op = { ^"+" | ^"-" | ^"*" | ^"/" | ^"^" }
-solve_expr = { (^"(" | ^")" | number | math_op)+ }
+math_op = { "+" | "-" | "*" | "/" | "^" }
+solve_expr = { ("(" | ")" | number | ident | math_op)+ }
 solve_stmt = { ^"IN" ~ var ~ ^"SOLVE" ~ solve_expr }
 
-floor_stmt = { ^"FLOOR" ~ expr }
+floor_stmt = { floor_in_stmt | floor_expr_stmt }
+floor_expr_stmt = { ^"FLOOR" ~ expr }
 floor_in_stmt = { ^"FLOOR" ~ expr ~ ^"IN" ~ var }
-ceil_stmt = { ^"CEIL" ~ expr }
+
+ceil_stmt = { ceil_in_stmt | ceil_expr_stmt }
+ceil_expr_stmt = { ^"CEIL" ~ expr }
 ceil_in_stmt = { ^"CEIL" ~ expr ~ ^"IN" ~ var }
+
 mod_by_stmt = { ^"MODULE" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
 get_rand_stmt = { ^"GET" ~ ^"RANDOM" ~ ^"IN" ~ var }
 raise_stmt = { ^"RAISE" ~ expr ~ ^"TO" ~ ^"THE" ~ expr ~ ^"IN" ~ var }
