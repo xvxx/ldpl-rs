@@ -40,13 +40,15 @@ data_section = {
     ~ (type_def ~ "\n"+)*
 }
 
+type_def = { ident ~ ^"IS" ~ ^"EXTERNAL"? ~ type_name }
+
 // Ident: person, something.with.dots, _, __INIT__, etc
 // https://docs.ldpl-lang.org/naming/
 alpha = { ASCII_ALPHA | "_" }
 banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
 ident = @{ alpha ~ (!banned ~ ANY)* }
 
-// types TODO: x OF y..
+// TODO: x OF y..
 type_name = {
     // legacy
     ^"NUMBER VECTOR" |
@@ -60,7 +62,6 @@ type_name = {
     ^"TEXT MAP" |
     ^"TEXT"
 }
-type_def = { ident ~ ^"IS" ~ ^"EXTERNAL"? ~ type_name }
 
 ////
 // PROCEDURE:
