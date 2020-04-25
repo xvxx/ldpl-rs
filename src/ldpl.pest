@@ -98,9 +98,7 @@ char = {
 }
 
 // Linefeed: lf, crlf
-linefeed = ${ lf_lit | crlf_lit }
-lf_lit = { ^"LF" }
-crlf_lit = { ^"CRLF" }
+linefeed = ${ ^"LF" | ^"CRLF" }
 
 // Lookup: person:"Name", list:5, etc
 lookup = ${ ident ~ (":" ~ ( text | number | ident))+ }
