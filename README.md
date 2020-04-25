@@ -17,7 +17,8 @@
 
 This is an experimental **LDPL 4.4** compiler written in Rust. Like
 the official compiler, LDPL code is translated to C++ code and then
-compiled into a standalone binary.
+compiled into a standalone binary. It works on Linux, macOS, and
+Android systems.
 
 ## Building It
 
