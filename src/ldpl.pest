@@ -120,13 +120,21 @@ sub_def_stmt = {
     (^"SUB-PROCEDURE" | ^"SUB")
     ~ ident
     ~ "\n"+
-    ~ (^"PARAMETERS:" ~ "\n"+ ~ (type_def ~ "\n"+)+)?
-    ~ (^"LOCAL DATA:" ~ "\n"+ ~ (type_def ~ "\n"+)+)?
+    ~ sub_param_section?
+    ~ sub_data_section?
     ~ ^"PROCEDURE:"?
     ~ "\n"*
     ~ (subproc_stmt ~ "\n"+)*
     ~ "\n"*
     ~ (^"END SUB-PROCEDURE" | ^"END SUB")
+}
+
+sub_param_section = {
+    ^"PARAMETERS:" ~ "\n"+ ~ (type_def ~ "\n"+)+
+}
+
+sub_data_section = {
+    ^"LOCAL DATA:" ~ "\n"+ ~ (type_def ~ "\n"+)+
 }
 
 // valid procedure: statments
