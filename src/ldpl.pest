@@ -146,6 +146,7 @@ subproc_stmt = {
     | map_stmt
     | list_and_map_stmt
     | io_stmt
+    | user_stmt
 }
 
 ////
@@ -369,3 +370,11 @@ execute_stmt = _{ execute_exit_code_stmt | execute_output_stmt | execute_expr_st
 execute_expr_stmt = { ^"EXECUTE" ~ expr }
 execute_output_stmt = { ^"EXECUTE" ~ expr ~ ^"AND" ~ ^"STORE" ~ ^"OUTPUT" ~ ^"IN" ~ var }
 execute_exit_code_stmt = { ^"EXECUTE" ~ expr ~ ^"AND" ~ ^"STORE" ~ ^"EXIT" ~ ^"CODE" ~ ^"IN" ~ var }
+
+////
+// USER DEFINED STATEMENTS
+//
+
+user_stmt = {
+    !(^"END" | ^"END-IF") ~ expr_list
+}

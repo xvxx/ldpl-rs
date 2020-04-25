@@ -147,3 +147,30 @@ fn test_store_stmt() {
     assert_eq!(Rule::number, node.as_rule());
     assert_eq!("-12051205.0325035", node.as_str());
 }
+
+#[test]
+fn test_user_stmt() {
+    let node = parse_one!("socket connect to gopher.host at gopher.port in gopher.socket");
+    assert_eq!(Rule::user_stmt, node.as_rule());
+
+    let mut iter = node.into_inner();
+    let node = iter.next().unwrap();
+    assert_eq!(Rule::expr_list, node.as_rule());
+    assert_eq!(
+        "socket connect to gopher.host at gopher.port in gopher.socket",
+        node.as_str()
+    );
+
+    let mut iter = node.into_inner();
+    let node = iter.next().unwrap();
+    assert_eq!(Rule::var, node.as_rule());
+    assert_eq!("socket", node.as_str());
+
+    let node = iter.next().unwrap();
+    assert_eq!(Rule::var, node.as_rule());
+    assert_eq!("connect", node.as_str());
+
+    let node = iter.next().unwrap();
+    assert_eq!(Rule::var, node.as_rule());
+    assert_eq!("to", node.as_str());
+}
