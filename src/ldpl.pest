@@ -70,13 +70,13 @@ type_name = {
 // PROCEDURE:
 //
 
-procedure_section = {
+procedure_section = _{
     ^"PROCEDURE:" ~ "\n"+
     ~ (proc_stmt ~ "\n"+)*
     ~ proc_stmt?
 }
 
-proc_stmt = {
+proc_stmt = _{
     create_stmt_stmt |
     sub_def_stmt |
     subproc_stmt
@@ -138,7 +138,7 @@ sub_data_section = {
 }
 
 // valid procedure: statments
-subproc_stmt = {
+subproc_stmt = _{
     flow_stmt
     | arithmetic_stmt
     | text_stmt
@@ -208,21 +208,33 @@ for_stmt = {
 
 // used in if, while, for
 test_expr = {
-    one_test_expr ~ ^"OR" ~ test_expr
-    | one_test_expr ~ ^"AND" ~ test_expr
+    or_test_expr
+    | and_test_expr
     | one_test_expr
+}
+or_test_expr = {
+    one_test_expr ~ ^"OR" ~ test_expr
+}
+and_test_expr = {
+    one_test_expr ~ ^"AND" ~ test_expr
 }
 one_test_expr = {
     expr ~ (
-    ^"IS" ~ ^"EQUAL" ~ ^"TO" |
-    ^"IS" ~ ^"NOT" ~ ^"EQUAL" ~ ^"TO" |
-    ^"IS" ~ ^"GREATER" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO" |
-    ^"IS" ~ ^"GREATER" ~ ^"THAN" |
-    ^"IS" ~ ^"LESS" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO" |
-    ^"IS" ~ ^"LESS" ~ ^"THAN"
+        equal_expr
+        | not_equal_expr
+        | gte_expr
+        | gt_expr
+        | lte_expr
+        | lt_expr
     )
     ~ expr
 }
+equal_expr = { ^"IS" ~ ^"EQUAL" ~ ^"TO" }
+not_equal_expr = { ^"IS" ~ ^"NOT" ~ ^"EQUAL" ~ ^"TO" }
+gte_expr = { ^"IS" ~ ^"GREATER" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO" }
+gt_expr = { ^"IS" ~ ^"GREATER" ~ ^"THAN" }
+lt_expr = { ^"IS" ~ ^"LESS" ~ ^"THAN" }
+lte_expr = { ^"IS" ~ ^"LESS" ~ ^"THAN" ~ ^"OR" ~ ^"EQUAL" ~ ^"TO" }
 
 loop_kw_stmt = { ^"BREAK" | ^"CONTINUE" }
 return_stmt = { ^"RETURN" }
@@ -376,5 +388,5 @@ execute_exit_code_stmt = { ^"EXECUTE" ~ expr ~ ^"AND" ~ ^"STORE" ~ ^"EXIT" ~ ^"C
 //
 
 user_stmt = {
-    !(^"END" | ^"END-IF") ~ expr_list
+    !(^"END" | ^"END-IF" | ^"REPEAT") ~ expr_list
 }
