@@ -16,5 +16,5 @@ name = "ldpl-rs"
 path = "src/main.rs"
 
 [dependencies]
-pest = "2.0"
-pest_derive = "2.0"
+pest = "2.1.3"
+pest_derive = "2.1.0"
