@@ -60,7 +60,7 @@ type_name = {
     ^"TEXT MAP" |
     ^"TEXT"
 }
-type_def = { ident ~ ^"IS" ~ type_name }
+type_def = { ident ~ ^"IS" ~ ^"EXTERNAL"? ~ type_name }
 
 ////
 // PROCEDURE:
