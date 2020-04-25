@@ -2,8 +2,8 @@
 
 use crate::{parser::Rule, LDPLResult};
 use pest::iterators::{Pair, Pairs};
+
 /// Setup the C++ main() function
-///
 const MAIN_HEADER: &'static str = r#"
 ldpl_list<chText> VAR_ARGV;
 ldpl_number VAR_ERRORCODE = 0;
@@ -156,7 +156,7 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 
     out.push(match pair.as_rule() {
         Rule::call_stmt => "".to_string(),
-        Rule::display_stmt => "".to_string(),
+        Rule::display_stmt => emit_display_stmt(pair)?,
         Rule::store_stmt => emit_store_stmt(pair)?,
         Rule::solve_stmt => "".to_string(),
         Rule::if_stmt => emit_if_stmt(pair)?,
@@ -165,7 +165,7 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         _ => "".to_string(),
     });
 
-    Ok(out.join("\n"))
+    Ok(out.join(""))
 }
 
 /// STORE _ IN _
@@ -174,6 +174,16 @@ fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let val = iter.next().unwrap().as_str();
     let ident = iter.next().unwrap().as_str();
     Ok(format!("{} = {};\n", mangle_var(ident), val))
+}
+
+/// DISPLAY _...
+fn emit_display_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut parts = vec!["cout".to_string()];
+    let expr_list = pair.into_inner().next().unwrap();
+    for node in expr_list.into_inner() {
+        parts.push(emit_expr(node)?);
+    }
+    Ok(format!("{};\n", parts.join(" << ")))
 }
 
 /// IF and WHILE test statement
@@ -223,8 +233,11 @@ fn emit_expr(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::var => mangle_var(pair.as_str()),
         Rule::number => pair.as_str().to_string(),
         Rule::text => pair.as_str().to_string(),
-        Rule::linefeed => "\n".to_string(),
-        _ => unimplemented!(),
+        Rule::linefeed => "\"\n\"".to_string(),
+        _ => {
+            println!("!> GOT: {:?}", pair);
+            unimplemented!();
+        }
     })
 }
 
