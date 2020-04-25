@@ -4,6 +4,12 @@ version = "0.1.0"
 authors = ["chris west <c@xvxx.io>"]
 edition = "2018"
 license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/xvxx/ldpl-rs"
+keywords = ["ldpl", "language"]
+exclude = [
+    "img/*",
+]
 
 [[bin]]
 name = "ldpl-rs"
