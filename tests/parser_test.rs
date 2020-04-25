@@ -63,6 +63,28 @@ fn test_text() {
 }
 
 #[test]
+fn test_newline() {
+    let node = parse_one!("display hello crlf goodbye");
+    assert_eq!(Rule::display_stmt, node.as_rule());
+
+    let mut iter = node.into_inner();
+    let list = iter.next().unwrap();
+    let mut iter = list.into_inner();
+
+    let var = iter.next().unwrap();
+    assert_eq!("hello", var.as_str());
+    assert_eq!(Rule::var, var.as_rule());
+
+    let crlf = iter.next().unwrap();
+    assert_eq!("crlf", crlf.as_str());
+    assert_eq!(Rule::linefeed, crlf.as_rule());
+
+    let var = iter.next().unwrap();
+    assert_eq!("goodbye", var.as_str());
+    assert_eq!(Rule::var, var.as_rule());
+}
+
+#[test]
 fn test_lookup() {
     let node = parse_expr!("abc:5");
     assert_eq!(Rule::var, node.as_rule());

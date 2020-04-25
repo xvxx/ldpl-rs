@@ -180,7 +180,9 @@ fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 fn emit_display_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut parts = vec!["cout".to_string()];
     let expr_list = pair.into_inner().next().unwrap();
+    println!("LIST: {:?}", expr_list);
     for node in expr_list.into_inner() {
+        println!("GOT:: {:?}", node);
         parts.push(emit_expr(node)?);
     }
     Ok(format!("{};\n", parts.join(" << ")))
