@@ -43,8 +43,8 @@ fn main() -> Result<(), std::io::Error> {
         todo!();
     }
 
-    let cxx = emitter::emit(ast);
-    println!("{:?}", cxx);
+    let cxx = emitter::emit(ast)?;
+    println!("{}", cxx);
     Ok(())
 }
 

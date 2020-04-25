@@ -1,8 +1,9 @@
 #[macro_use]
 extern crate pest_derive;
 
-pub mod emitter;
+#[macro_use]
 pub mod error;
+pub mod emitter;
 pub mod parser;
 
 pub use error::LDPLError;
