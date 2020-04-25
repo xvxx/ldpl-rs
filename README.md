@@ -36,7 +36,7 @@ can use to run any of the official LDPL examples:
     ./target/release/ldpl-rs examples/99bottles.ldpl
 
 To take it with you, just copy `./target/release/ldpl-rs` to
-`/usr/local/bin` or wherever.
+`/usr/local/bin` or wherever in your `$PATH`.
 
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
