@@ -159,7 +159,7 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::display_stmt => "".to_string(),
         Rule::store_stmt => emit_store_stmt(pair)?,
         Rule::solve_stmt => "".to_string(),
-        Rule::if_stmt => "".to_string(),
+        Rule::if_stmt => emit_if_stmt(pair)?,
         Rule::else_stmt => "".to_string(),
         Rule::while_stmt => emit_while_stmt(pair)?,
         _ => "".to_string(),
@@ -228,15 +228,49 @@ fn emit_expr(pair: Pair<Rule>) -> LDPLResult<String> {
     })
 }
 
-/// WHILE _ DO REPEAT
+/// WHILE _ DO / REPEAT
 fn emit_while_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
     let test = iter.next().unwrap();
     let test = emit_test_stmt(test)?;
 
     let mut body = vec![];
-    for node in iter.next().unwrap().into_inner() {
+    for node in iter {
         body.push(emit_subproc_stmt(node)?);
     }
     Ok(format!("while {} {{\n{}\n}}\n", test, body.join("\n")))
+}
+
+/// IF _ THEN / END IF
+fn emit_if_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let test = iter.next().unwrap();
+    let test = emit_test_stmt(test)?;
+
+    let mut body = vec![];
+    for node in iter {
+        match node.as_rule() {
+            Rule::else_stmt => body.push(emit_else_stmt(node)?),
+            _ => body.push(emit_subproc_stmt(node)?),
+        }
+    }
+
+    Ok(format!("if {} {{\n{}\n}}\n", test, body.join("\n")))
+}
+
+/// ELSE IF _ THEN
+fn emit_else_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut test = None;
+    for node in pair.into_inner() {
+        match node.as_rule() {
+            Rule::test_expr => test = Some(emit_test_stmt(node)?),
+            _ => unimplemented!(),
+        }
+    }
+
+    if test.is_some() {
+        Ok(format!("}} else if {} {{\n", test.unwrap()))
+    } else {
+        Ok(format!("}} else {{\n"))
+    }
 }
