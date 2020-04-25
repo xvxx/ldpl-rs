@@ -1,19 +1,90 @@
-/*
- * BASICS
- */
+////
+// LDPL 4.4
+//
 
-// atoms
-alpha = { ASCII_ALPHA | "_" }
-digit = { ASCII_DIGIT }
 WHITESPACE = _{ " " | "\t" | "\r" }
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 
-// number: -3.14
+program = _{
+    SOI
+    ~ "\n"*
+    ~ (cxx_ext_stmt ~ "\n"+)*
+    ~ "\n"*
+    ~ data_section?
+    ~ "\n"*
+    ~ procedure_section?
+    ~ "\n"*
+    ~ EOI
+}
+
+////
+// C++ EXTENSION
+//
+
+cxx_ext_stmt = {
+    include_stmt | extension_stmt
+}
+include_stmt = {
+    ^"INCLUDE" ~ text
+}
+extension_stmt = {
+    ^"EXTENSION" ~ text
+}
+
+////
+// DATA:
+//
+
+data_section = {
+    ^"DATA:" ~ "\n"+
+    ~ (type_def ~ "\n"+)*
+}
+
+// Ident: person, something.with.dots, _, __INIT__, etc
+// https://docs.ldpl-lang.org/naming/
+alpha = { ASCII_ALPHA | "_" }
+banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"}
+ident = @{ alpha ~ (!banned ~ ANY)* }
+
+// types TODO: x OF y..
+type_name = {
+    // legacy
+    ^"NUMBER VECTOR" |
+    ^"TEXT VECTOR" |
+
+    // hip and cool
+    ^"NUMBER LIST" |
+    ^"NUMBER MAP" |
+    ^"NUMBER" |
+    ^"TEXT LIST" |
+    ^"TEXT MAP" |
+    ^"TEXT"
+}
+type_def = { ident ~ ^"IS" ~ type_name }
+
+////
+// PROCEDURE:
+//
+
+procedure_section = {
+    ^"PROCEDURE:" ~ "\n"+
+    ~ (proc_stmt ~ "\n"+)*
+    ~ proc_stmt?
+}
+
+proc_stmt = {
+    create_stmt_stmt |
+    sub_def_stmt |
+    subproc_stmt
+}
+
+// Number
 sign = { "+" | "-" }
+digit = { ASCII_DIGIT }
 number = @{ sign? ~ digit+ ~ ("." ~ digit+)? }
 number_list = @{ number ~ (" " ~ number)* }
 
-// text: "Something something."
+// Text
 text = ${ "\"" ~ text_inner ~ "\"" }
 text_inner = @{ char* }
 char = {
@@ -22,18 +93,14 @@ char = {
     | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
 }
 
-// linefeed: lf, crlf
+// Linefeed: lf, crlf
 linefeed = { ^"LF" | ^"CRLF" }
 
-// ident: name, something.with.dots, etc
-ident = @{ alpha ~ (!banned ~ ANY)* }
-banned = { ":" | "(" | ")" | "\"" | " " | "\t" | "\n" | "\r"} // https://docs.ldpl-lang.org/naming/
+// Lookup: person:"Name", list:5, etc
+lookup = ${ ident ~ (":" ~ ( text | number | ident))+ }
 
-// lookup: person:"Name", list:5, etc
-lookup = { ident ~ (":" ~ ( text | number | ident))+ }
-
-// variable: name, something.with.dots, person:"Name", etc
-var = { lookup | ident }
+// Variable: name, something.with.dots, person:"Name", etc
+var = ${ lookup | ident }
 
 // expressions are either variables, text, or numbers.
 expr = _{ var | number | text | linefeed }
@@ -41,112 +108,10 @@ expr = _{ var | number | text | linefeed }
 // expr list: one two "three" 4 5 "six"
 expr_list = @{ expr ~ (" " ~ expr)* }
 
-// types TODO: x OF y..
-basic_type = {
-    ^"NUMBER LIST" |
-    ^"NUMBER MAP" |
-    ^"NUMBER" |
-    ^"TEXT LIST" |
-    ^"TEXT MAP" |
-    ^"TEXT"
-}
-old_type = {
-    ^"NUMBER VECTOR" |
-    ^"TEXT VECTOR"
-}
-type_name = @{ old_type | basic_type }
-type_def = { ident ~ ^"IS" ~ type_name }
+// create a statement... statment
+create_stmt_stmt = { ^"CREATE" ~ ^"STATEMENT" ~ text ~ ^"EXECUTING" ~ ident }
 
-// whole thing
-program = _{
-    SOI
-    ~ "\n"*
-    ~ (^"INCLUDE" ~ text ~ "\n"+)*
-    ~ "\n"*
-    ~ data_section?
-    ~ "\n"*
-    ~ (^"PROCEDURE:" ~ "\n"+)?
-    ~ (proc_stmt ~ "\n"+)*
-    ~ proc_stmt?
-    ~ EOI
-}
-
-/*
- * DATA:
- */
-
-data_section = _{
-    ^"DATA:" ~ "\n"+
-    ~ (type_def ~ "\n"+)*
-}
-
-/*
- * PROCEDURE:
- */
-
-proc_stmt = {
-    create_stmt_stmt |
-    sub_def_stmt |
-    subproc_stmt
-}
-
-subproc_stmt = {
-    if_stmt
-    | else_stmt
-    | while_stmt
-    | for_each_stmt
-    | for_stmt
-    | return_stmt
-    | loop_kw_stmt
-    | goto_stmt
-    | label_stmt
-    | store_stmt
-    | exit_stmt
-    | wait_stmt
-    | call_stmt
-    | solve_stmt
-    | modulo_stmt
-    | floor_stmt
-    | ceil_stmt
-    | mod_by_stmt
-    | get_rand_stmt
-    | raise_stmt
-    | log_stmt
-    | sin_stmt
-    | cos_stmt
-    | tan_stmt
-    | join_stmt
-    | old_join_stmt
-    | replace_stmt
-    | split_stmt
-    | get_char_stmt
-    | get_ascii_stmt
-    | get_char_code_stmt
-    | store_quote_stmt
-    | get_index_stmt
-    | count_stmt
-    | substr_stmt
-    | trim_stmt
-    | get_length_stmt
-    | push_stmt
-    | delete_stmt
-    | clear_stmt
-    | copy_stmt
-    | get_keys_count_stmt
-    | get_keys_stmt
-    | display_stmt
-    | load_stmt
-    | write_stmt
-    | append_stmt
-    | accept_stmt
-    | execute_stmt
-}
-
-
-/*
- * SUB-PROCEDURES
- */
-
+// sub-procedure aka function
 sub_def_stmt = {
     (^"SUB-PROCEDURE" | ^"SUB")
     ~ ident
@@ -160,18 +125,43 @@ sub_def_stmt = {
     ~ (^"END SUB-PROCEDURE" | ^"END SUB")
 }
 
-/*
- * LDPL 4.4 PROCEDURE: STATEMENTS
- */
+// valid procedure: statments
+subproc_stmt = {
+    flow_stmt
+    | arithmetic_stmt
+    | text_stmt
+    | list_stmt
+    | map_stmt
+    | list_and_map_stmt
+    | io_stmt
+}
 
+
+////
 // FLOW
+//
+
+flow_stmt = _{
+    call_stmt
+    | if_stmt
+    | while_stmt
+    | for_each_stmt
+    | for_stmt
+    | loop_kw_stmt
+    | return_stmt
+    | goto_stmt
+    | label_stmt
+    | store_stmt
+    | exit_stmt
+    | wait_stmt
+}
 
 if_stmt = {
     ^"IF"
     ~ test_expr
     ~ ^"THEN"
     ~ "\n"+
-    ~ (subproc_stmt ~ "\n"+ | else_stmt ~ "\n"+)*
+    ~ (else_stmt ~ "\n"+ | subproc_stmt ~ "\n"+)*
     ~ "\n"*
     ~ (^"END" ~ ^"IF" | ^"END-IF")
 }
@@ -204,6 +194,7 @@ for_stmt = {
     ~ ^"REPEAT"
 }
 
+// used in if, while, for
 test_expr = {
     one_test_expr ~ ^"OR" ~ test_expr
     | one_test_expr ~ ^"AND" ~ test_expr
@@ -228,20 +219,32 @@ label_stmt = { ^"LABEL" ~ ident }
 store_stmt = { ^"STORE" ~ expr ~ ^"IN" ~ var }
 exit_stmt = { ^"EXIT" }
 wait_stmt = { ^"WAIT" ~ expr ~ ^"MILLISECONDS" }
-create_stmt_stmt = { ^"CREATE" ~ ^"STATEMENT" ~ expr ~ ^"EXECUTING" ~ ident }
 
 call_stmt = _{ call_external_stmt | call_verbose_stmt | call_sub_stmt }
 call_external_stmt = { ^"CALL" ~ ^"EXTERNAL" ~ var ~ (^"WITH" ~ expr_list)? }
 call_verbose_stmt = { ^"CALL" ~ ^"SUB-PROCEDURE" ~ var ~ (^"WITH" ~ expr_list)? }
 call_sub_stmt = { ^"CALL" ~ var ~ (^"WITH" ~ expr_list)? }
 
-// MATH
+////
+// ARITHMETIC
+//
+
+arithmetic_stmt = _{
+    solve_stmt
+    | floor_stmt
+    | ceil_stmt
+    | modulo_stmt
+    | get_rand_stmt
+    | raise_stmt
+    | log_stmt
+    | sin_stmt
+    | cos_stmt
+    | tan_stmt
+}
 
 math_op = { "+" | "-" | "*" | "/" | "^" }
 solve_expr = { ("(" | ")" | number | var | math_op)+ }
 solve_stmt = { ^"IN" ~ var ~ ^"SOLVE" ~ solve_expr }
-
-modulo_stmt = { ^"MODULO" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
 
 floor_stmt = { floor_in_stmt | floor_expr_stmt }
 floor_expr_stmt = { ^"FLOOR" ~ expr }
@@ -251,7 +254,7 @@ ceil_stmt = { ceil_in_stmt | ceil_expr_stmt }
 ceil_expr_stmt = { ^"CEIL" ~ expr }
 ceil_in_stmt = { ^"CEIL" ~ expr ~ ^"IN" ~ var }
 
-mod_by_stmt = { ^"MODULE" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
+modulo_stmt = { ^"MODULO" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
 get_rand_stmt = { ^"GET" ~ ^"RANDOM" ~ ^"IN" ~ var }
 raise_stmt = { ^"RAISE" ~ expr ~ ^"TO" ~ ^"THE" ~ expr ~ ^"IN" ~ var }
 log_stmt = { ^"LOG" ~ expr ~ ^"IN" ~ var }
@@ -259,7 +262,24 @@ sin_stmt = { ^"SIN" ~ expr ~ ^"IN" ~ var }
 cos_stmt = { ^"COS" ~ expr ~ ^"IN" ~ var }
 tan_stmt = { ^"TAN" ~ expr ~ ^"IN" ~ var }
 
+////
 // TEXT
+//
+
+text_stmt = _{
+    join_stmt
+    | old_join_stmt
+    | replace_stmt
+    | split_stmt
+    | get_char_stmt
+    | get_ascii_stmt
+    | get_char_code_stmt
+    | store_quote_stmt
+    | get_index_stmt
+    | count_stmt
+    | substr_stmt
+    | trim_stmt
+}
 
 join_stmt = { ^"IN" ~ var ~ ^"JOIN" ~ expr_list }
 old_join_stmt = { ^"JOIN" ~ expr ~ ^"AND" ~ expr ~ ^"IN" ~ var }
@@ -274,26 +294,56 @@ count_stmt = { ^"COUNT" ~ expr ~ ^"FROM" ~ expr ~ ^"IN" ~ var }
 substr_stmt = { ^"SUBSTRING" ~ expr ~ ^"FROM" ~ expr ~ ^"LENGTH" ~ expr ~ ^"IN" ~ var }
 trim_stmt = { ^"TRIM" ~ expr ~ ^"IN" ~ var }
 
-// TEXT & LIST
+////
+// LIST
+//
+
+list_stmt = _{
+    get_length_stmt // (also TEXT)
+    | push_stmt
+    | delete_stmt
+}
 
 get_length_stmt = { ^"GET" ~ ^"LENGTH" ~ ^"OF" ~ expr ~ ^"IN" ~ var }
-
-// LIST
-
 push_stmt = { ^"PUSH" ~ expr ~ ^"TO" ~ expr }
 delete_stmt = { ^"DELETE" ~ ^"LAST" ~ ^"ELEMENT" ~ ^"OF" ~ expr }
 
+////
 // LIST & MAP
+//
+
+list_and_map_stmt = _{
+    clear_stmt
+    | copy_stmt
+}
 
 clear_stmt = { ^"CLEAR" ~ expr }
 copy_stmt = { ^"COPY" ~ expr ~ ^"TO" ~ var }
 
+////
 // MAP
+//
+
+map_stmt = _{
+    get_keys_count_stmt
+    | get_keys_stmt
+}
 
 get_keys_count_stmt = { ^"GET" ~ ^"KEY" ~ ^"COUNT" ~ ^"OF" ~ expr ~ ^"IN" ~ var }
 get_keys_stmt = { ^"GET" ~ ^"KEYS" ~ ^"OF" ~ expr ~ ^"IN" ~ var }
 
+////
 // IO
+//
+
+io_stmt = _{
+    display_stmt
+    | load_stmt
+    | write_stmt
+    | append_stmt
+    | accept_stmt
+    | execute_stmt
+}
 
 display_stmt = { ^"DISPLAY" ~ expr_list }
 load_stmt = { ^"LOAD" ~ ^"FILE" ~ expr ~ ^"IN" ~ var }
