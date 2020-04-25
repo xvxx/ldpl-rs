@@ -107,7 +107,7 @@ lookup = ${ ident ~ (":" ~ ( text | number | ident))+ }
 var = ${ lookup | ident }
 
 // expressions are either variables, text, or numbers.
-expr = _{ var | number | text | linefeed }
+expr = _{ linefeed | var | number | text }
 
 // expr list: one two "three" 4 5 "six"
 expr_list = @{ expr ~ (" " ~ expr)* }
