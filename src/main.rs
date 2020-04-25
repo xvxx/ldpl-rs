@@ -1,16 +1,76 @@
-use ldpl::parser::{LDPLParser, Parser, Rule};
+use ldpl::{
+    emitter,
+    parser::{LDPLParser, Parser, Rule},
+};
+use pest::iterators::Pairs;
 
-fn main() {
-    let args = std::env::args().collect::<Vec<String>>();
-    if args.len() < 2 {
-        eprintln!("ERROR: Please provide an LDPL file.");
-        std::process::exit(1);
+fn main() -> Result<(), std::io::Error> {
+    let args = std::env::args().skip(1).collect::<Vec<String>>();
+
+    if args.is_empty() {
+        print_usage();
+        return Ok(());
     }
-    let file = args.get(1).unwrap();
-    let code = std::fs::read_to_string(file).unwrap();
 
-    let pairs = LDPLParser::parse(Rule::program, &code).unwrap();
-    for pair in pairs {
+    match args[0].as_ref() {
+        "-h" | "--help" | "-help" | "help" => {
+            print_usage();
+            return Ok(());
+        }
+        "-v" | "--version" | "-version" | "version" => {
+            print_version();
+            return Ok(());
+        }
+        _ => {}
+    }
+
+    let mut command = "emit";
+    let mut path = &args[0];
+    if args.len() >= 2 {
+        command = &args[0];
+        path = &args[1];
+    };
+
+    let source = std::fs::read_to_string(path)?;
+
+    let ast = LDPLParser::parse(Rule::program, &source).unwrap();
+    if command == "parse" {
+        print_ast(ast);
+        return Ok(());
+    }
+
+    if command == "check" {
+        todo!();
+    }
+
+    let cxx = emitter::emit(ast);
+    println!("{:?}", cxx);
+    Ok(())
+}
+
+fn print_usage() {
+    print!(
+        r#"Usage: ldpl-rs [COMMAND] <file.ldpl>
+
+Commands:
+  parse       Parse and print syntax tree.
+  check       Check for compile errors only.
+  emit        Print C++ code. (default)
+"#
+    );
+}
+
+fn print_version() {
+    println!(
+        "ldpl-rs v{version} ({built})",
+        built = ldpl::BUILD_DATE,
+        version = ldpl::VERSION
+    );
+}
+
+/// Print parsed AST
+fn print_ast(ast: Pairs<Rule>) {
+    for pair in ast {
         // A pair is a combination of the rule which matched and a span of input
         println!("Rule:    {:?}", pair.as_rule());
         println!("Span:    {:?}", pair.as_span());
