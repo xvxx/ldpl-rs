@@ -21,8 +21,9 @@ compiled into a standalone binary.
 
 ## Building It
 
-LDPL-RS requires **cargo**, **Rust**, **git**, and **a C++ compiler**
-to work. Once you have all those, installation is a breeze:
+LDPL-RS requires [**cargo**][rustup], [**Rust**][rustup],
+[**git**][git], and a [**C++ compiler**][cxx-compiler] to build. Once
+you have all those, installation is a breeze:
 
     git clone git://github.com/xvxx/ldpl-rs
     cd ldpl-rs
@@ -40,3 +41,6 @@ To take it with you, just copy `./target/release/ldpl-rs` to
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
 [pest]: https://pest.rs/
+[rustup]: http://rustup.io/
+[git]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+[cxx-compiler]: https://gcc.gnu.org/install/
