@@ -10,15 +10,7 @@ macro_rules! parse {
 // parse into a single node/pair
 macro_rules! parse_one {
     ($e:expr) => {
-        parse!($e)
-            .nth(0)
-            .unwrap()
-            .into_inner()
-            .nth(0)
-            .unwrap()
-            .into_inner()
-            .nth(0)
-            .unwrap()
+        parse!($e).next().unwrap()
     };
 }
 
