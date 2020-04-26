@@ -20,6 +20,12 @@ const MAIN_FOOTER: &'static str = r#"
 }
 "#;
 
+macro_rules! unexpected {
+    ($rule:expr) => {
+        panic!("Unexpected rule: {:?}", $rule);
+    };
+}
+
 /// Turns parsed LDPL code into a string of C++ code.
 pub fn emit(ast: Pairs<Rule>) -> LDPLResult<String> {
     let mut out = vec![CPP_HEADER.to_string()];
@@ -31,7 +37,7 @@ pub fn emit(ast: Pairs<Rule>) -> LDPLResult<String> {
             Rule::data_section => out.push(emit_data(pair)?),
             Rule::create_stmt_stmt => todo!(),
             Rule::sub_def_stmt => out.push(emit_sub_def_stmt(pair)?),
-            Rule::EOI => {}
+            Rule::EOI => break,
             _ => main.push_str(&emit_subproc_stmt(pair)?),
         }
     }
@@ -163,10 +169,13 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::if_stmt => emit_if_stmt(pair)?,
         Rule::else_stmt => return error!("unexpected ELSE statement"),
         Rule::while_stmt => emit_while_stmt(pair)?,
+        Rule::accept_stmt => emit_accept_stmt(pair)?,
         Rule::user_stmt => {
             panic!("Unexpected user_stmt: {:?}", pair);
         }
-        _ => "".to_string(),
+        _ => {
+            panic!("Unexpected stmt: {:?}", pair);
+        }
     });
 
     Ok(out.join(""))
@@ -178,6 +187,23 @@ fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let val = iter.next().unwrap().as_str();
     let ident = iter.next().unwrap().as_str();
     Ok(format!("{} = {};\n", mangle_var(ident), val))
+}
+
+/// ACCEPT _ / ACCEPT _ UNTIL EOF
+fn emit_accept_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let stmt = pair.into_inner().next().unwrap();
+
+    let eof = stmt.as_rule() == Rule::accept_eof_stmt;
+    let ident = stmt.into_inner().next().unwrap().as_str();
+
+    let fun = if eof {
+        "input_until_eof()"
+    } else {
+        // TODO check for text vs number
+        "input_number()"
+    };
+
+    Ok(format!("{} = {};\n", mangle_var(ident), fun))
 }
 
 /// IN _ SOLVE X
@@ -255,7 +281,7 @@ fn emit_test_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
                 out.push(format!("({} && {})", left, right));
             }
             Rule::one_test_expr => out.push(emit_test_expr(test)?),
-            _ => unimplemented!(),
+            _ => unexpected!(test),
         }
     }
     Ok(out.join("\n"))
@@ -265,14 +291,15 @@ fn emit_test_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 fn emit_test_expr(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
     let left = emit_expr(iter.next().unwrap())?;
-    let sign = match iter.next().unwrap().as_rule() {
+    let mid = iter.next().unwrap();
+    let sign = match mid.as_rule() {
         Rule::equal_expr => "==",
         Rule::not_equal_expr => "!=",
         Rule::gt_expr => ">",
         Rule::lt_expr => "<",
         Rule::gte_expr => ">=",
         Rule::lte_expr => "<=",
-        _ => unimplemented!(),
+        _ => unexpected!(mid),
     };
     let right = emit_expr(iter.next().unwrap())?;
     Ok(format!("({} {} {})", left, sign, right))
@@ -327,7 +354,7 @@ fn emit_else_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     for node in pair.into_inner() {
         match node.as_rule() {
             Rule::test_expr => test = Some(emit_test_stmt(node)?),
-            _ => unimplemented!(),
+            _ => unexpected!(node),
         }
     }
 

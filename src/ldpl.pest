@@ -392,7 +392,7 @@ load_stmt = { ^"LOAD" ~ ^"FILE" ~ expr ~ ^"IN" ~ var }
 write_stmt = { ^"WRITE" ~ expr ~ ^"TO" ~ ^"FILE" ~ expr }
 append_stmt = { ^"APPEND" ~ expr ~ ^"TO" ~ ^"FILE" ~ expr }
 
-accept_stmt = _{ accept_eof_stmt | accept_var_stmt }
+accept_stmt = { accept_eof_stmt | accept_var_stmt }
 accept_var_stmt = { ^"ACCEPT" ~ var }
 accept_eof_stmt = { ^"ACCEPT" ~ var ~ ^"UNTIL" ~ ^"EOF" }
 

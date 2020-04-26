@@ -94,7 +94,7 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     info!("Building {}", bin);
-    compiler::compile(&cpp, None)?;
+    compiler::compile(&cpp, Some(&bin))?;
     info!("Saved as {}", bin);
 
     success!("File(s) compiled successfully.");
