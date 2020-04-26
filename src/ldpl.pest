@@ -123,7 +123,7 @@ var = ${ lookup | ident }
 expr = _{ linefeed | var | number | text }
 
 // expr list: one two "three" 4 5 "six"
-expr_list = ${ expr ~ (" " ~ expr)* }
+expr_list = ${ expr ~ (" "+ ~ expr)* }
 
 // create a statement... statment
 create_stmt_stmt = { ^"CREATE" ~ ^"STATEMENT" ~ text ~ ^"EXECUTING" ~ ident }
@@ -280,17 +280,15 @@ arithmetic_stmt = _{
     | tan_stmt
 }
 
-math_op = { "+" | "-" | "*" | "/" | "^" }
+math_op = { "+" | "-" | "*" | "/" | "^" | "(" | ")"}
 solve_expr = {
-    "("?
-    ~ ( expr | "(" ~ solve_expr ~ ")" ) ~ math_op ~ ( expr | "(" ~ solve_expr ~ ")" )
-    ~ ")"?
+    ((math_op | expr) ~ " "*)+
 }
 
 solve_stmt = { ^"IN" ~ var ~ ^"SOLVE" ~ solve_expr }
 
-floor_stmt = { floor_in_stmt | floor_expr_stmt }
-floor_expr_stmt = { ^"FLOOR" ~ expr }
+floor_stmt = { floor_in_stmt | floor_mut_stmt }
+floor_mut_stmt = { ^"FLOOR" ~ expr }
 floor_in_stmt = { ^"FLOOR" ~ expr ~ ^"IN" ~ var }
 
 ceil_stmt = { ceil_in_stmt | ceil_expr_stmt }

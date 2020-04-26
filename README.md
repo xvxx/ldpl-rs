@@ -130,11 +130,11 @@ Tracking what we have left to do, based on the docs:
   - [ ] CALL EXTERNAL \_
 - [ ] ARITHMETIC
   - [x] IN _ SOLVE _
-  - [ ] FLOOR
+  - [x] FLOOR
   - [ ] CEIL
-  - [ ] FLOOR _ IN _
+  - [x] FLOOR _ IN _
   - [ ] CEIL _ IN _
-  - [ ] MODULO _ BY _ IN \_
+  - [x] MODULO _ BY _ IN \_
   - [ ] GET RANDOM IN \_
   - [ ] RAISE _ TO THE _ IN \_
   - [ ] LOG _ IN _
