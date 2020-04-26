@@ -4,7 +4,11 @@ use ldpl::{
     LDPLResult,
 };
 use pest::iterators::Pairs;
-use std::path::Path;
+use std::{
+    io::Write,
+    path::Path,
+    process::{Command, Stdio},
+};
 
 const DEFAULT_COMMAND: &str = "build";
 
@@ -59,6 +63,7 @@ fn run() -> LDPLResult<()> {
     let mut command = DEFAULT_COMMAND;
     let mut path = String::new();
     let mut bin = String::new();
+    let mut fmt = false;
 
     // split args on = so -o=file is the same as -o file
     let mut new_args = vec![];
@@ -84,6 +89,7 @@ fn run() -> LDPLResult<()> {
                 print_version();
                 return Ok(());
             }
+            "--fmt" => fmt = true,
             "emit" | "-r" => command = "emit",
             "-o" => {
                 if args.is_empty() {
@@ -142,7 +148,11 @@ fn run() -> LDPLResult<()> {
     info!("Compiling {}", bin);
     let cpp = emitter::emit(ast)?;
     if command == "emit" {
-        println!("{}", cpp);
+        if fmt {
+            print_fmt(&cpp)?;
+        } else {
+            println!("{}", cpp);
+        }
         return Ok(());
     }
 
@@ -162,6 +172,24 @@ fn print_ast(ast: Pairs<Rule>) {
         println!("Span:    {:?}", pair.as_span());
         println!("Text:    {}", pair.as_str());
     }
+}
+
+/// Use clang-format to format raw C++.
+fn print_fmt(cpp: &str) -> LDPLResult<()> {
+    run_process("clang-format", &["--assume-filename=ldpl.cpp"], cpp)
+}
+
+fn run_process(cmd: &str, args: &[&str], stdin: &str) -> LDPLResult<()> {
+    let mut cmd = Command::new(cmd);
+    let cmd = cmd.args(args);
+
+    cmd.stdin(Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            let child_stdin = child.stdin.as_mut().unwrap();
+            child_stdin.write_all(stdin.as_bytes())
+        })
+        .map_err(|e| error!("process error: {}", e))
 }
 
 fn print_version() {
