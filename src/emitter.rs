@@ -3,18 +3,18 @@
 use crate::{parser::Rule, LDPLResult};
 use pest::iterators::{Pair, Pairs};
 
+/// Include common C++ functions in our program.
+const CPP_HEADER: &'static str = include_str!("../lib/ldpl_header.cpp");
+
 /// Setup the C++ main() function
 const MAIN_HEADER: &'static str = r#"
 ldpl_list<chText> VAR_ARGV;
-ldpl_number VAR_ERRORCODE = 0;
-chText VAR_ERRORTEXT = "";
 
 int main(int argc, char* argv[]) {
     cout.precision(numeric_limits<ldpl_number>::digits10);
     for(int i = 1; i < argc; ++i) VAR_ARGV.inner_collection.push_back(argv[i]);
 
 "#;
-
 const MAIN_FOOTER: &'static str = r#"
     return 0;
 }
@@ -22,7 +22,7 @@ const MAIN_FOOTER: &'static str = r#"
 
 /// Turns parsed LDPL code into a string of C++ code.
 pub fn emit(ast: Pairs<Rule>) -> LDPLResult<String> {
-    let mut out = vec![];
+    let mut out = vec![CPP_HEADER.to_string()];
     let mut main = MAIN_HEADER.to_string();
 
     for pair in ast {
@@ -286,7 +286,7 @@ fn emit_expr(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::text => pair.as_str().to_string(),
         Rule::linefeed => "\"\\n\"".to_string(),
         _ => {
-            unimplemented!();
+            panic!("UNIMPLEMENTED: {:?}", pair);
         }
     })
 }
