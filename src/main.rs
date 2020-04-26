@@ -1,13 +1,31 @@
 use ldpl::{
     compiler, emitter,
     parser::{LDPLParser, Parser, Rule},
+    LDPLResult,
 };
 use pest::iterators::Pairs;
 use std::path::Path;
 
 const DEFAULT_COMMAND: &str = "build";
 
-fn main() -> Result<(), std::io::Error> {
+/// Print error message to the console.
+macro_rules! error {
+        ($msg:expr) => {{
+            eprintln!("\x1b[91;1mLDPL Error: {}\x1b[0m", $msg.to_string().replace("Error: ", ""));
+            std::process::exit(1);
+        }};
+        ($fmt:expr, $($args:expr),*) => {
+            error!(format!($fmt, $($args),*));
+        };
+    }
+
+fn main() {
+    if let Err(e) = run() {
+        error!(e);
+    }
+}
+
+fn run() -> LDPLResult<()> {
     let quiet: bool;
     let args = std::env::args().skip(1).collect::<Vec<String>>();
 
@@ -35,17 +53,6 @@ fn main() -> Result<(), std::io::Error> {
         };
         ($fmt:expr, $($args:expr),*) => {
             success!(format!($fmt, $($args),*));
-        };
-    }
-
-    /// Print error message to the console.
-    macro_rules! error {
-        ($msg:expr) => {{
-            eprintln!("\x1b[91;1mLDPL Error: {}\x1b[0m", $msg);
-            std::process::exit(1);
-        }};
-        ($fmt:expr, $($args:expr),*) => {
-            info!(format!($fmt, $($args),*));
         };
     }
 
@@ -141,6 +148,24 @@ fn main() -> Result<(), std::io::Error> {
     Ok(())
 }
 
+/// Print parsed AST
+fn print_ast(ast: Pairs<Rule>) {
+    for pair in ast {
+        // A pair is a combination of the rule which matched and a span of input
+        println!("Rule:    {:?}", pair.as_rule());
+        println!("Span:    {:?}", pair.as_span());
+        println!("Text:    {}", pair.as_str());
+    }
+}
+
+fn print_version() {
+    println!(
+        "ldpl-rs v{version} ({built})",
+        built = ldpl::BUILD_DATE,
+        version = ldpl::VERSION
+    );
+}
+
 fn print_usage() {
     print!("\n\x1b[95;1mUsage:\x1b[0m");
     println!(
@@ -177,22 +202,4 @@ fn print_usage() {
   Documentation for LDPL can be found at \x1b[96;1mhttps://docs.ldpl-lang.org\x1b[0m
   "
     );
-}
-
-fn print_version() {
-    println!(
-        "ldpl-rs v{version} ({built})",
-        built = ldpl::BUILD_DATE,
-        version = ldpl::VERSION
-    );
-}
-
-/// Print parsed AST
-fn print_ast(ast: Pairs<Rule>) {
-    for pair in ast {
-        // A pair is a combination of the rule which matched and a span of input
-        println!("Rule:    {:?}", pair.as_rule());
-        println!("Span:    {:?}", pair.as_span());
-        println!("Text:    {}", pair.as_str());
-    }
 }
