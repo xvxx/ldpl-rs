@@ -176,6 +176,7 @@ flow_stmt = _{
     | return_stmt
     | goto_stmt
     | label_stmt
+    | store_quote_stmt
     | store_stmt
     | exit_stmt
     | wait_stmt
@@ -315,7 +316,6 @@ text_stmt = _{
     | get_char_stmt
     | get_ascii_stmt
     | get_char_code_stmt
-    | store_quote_stmt
     | get_index_stmt
     | count_stmt
     | substr_stmt
@@ -329,11 +329,18 @@ split_stmt = { ^"SPLIT" ~ expr ~ ^"BY" ~ expr ~ ^"IN" ~ var }
 get_char_stmt = { ^"GET" ~ ^"CHARACTER" ~ ^"AT" ~ expr ~ ^"FROM" ~ expr ~ ^"IN" ~ var }
 get_ascii_stmt = { ^"GET" ~ ^"ASCII" ~ ^"CHARACTER" ~ expr ~ ^"IN" ~ var }
 get_char_code_stmt = { ^"GET" ~ ^"CHARACTER" ~ ^"CODE" ~ ^"OF" ~ expr ~ ^"IN" ~ var }
-store_quote_stmt = { ^"STORE" ~ ^"QUOTE" ~ expr ~ ^"IN" ~ var }
 get_index_stmt = { ^"GET" ~ ^"INDEX" ~ ^"OF" ~ expr ~ ^"FROM" ~ expr ~ ^"IN" ~ var }
 count_stmt = { ^"COUNT" ~ expr ~ ^"FROM" ~ expr ~ ^"IN" ~ var }
 substr_stmt = { ^"SUBSTRING" ~ expr ~ ^"FROM" ~ expr ~ ^"LENGTH" ~ expr ~ ^"IN" ~ var }
 trim_stmt = { ^"TRIM" ~ expr ~ ^"IN" ~ var }
+store_quote_stmt = {
+    ^"STORE" ~ ^"QUOTE" ~ ^"IN" ~ var
+    ~ store_quote_inner*
+    ~ "\n" ~ ^"END QUOTE"
+}
+store_quote_inner = {
+    !("\n" ~ ^"END QUOTE") ~ ANY
+}
 
 ////
 // LIST
