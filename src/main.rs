@@ -7,32 +7,35 @@ use std::path::Path;
 
 const DEFAULT_COMMAND: &str = "build";
 
-/// Print info message to the console.
-macro_rules! info {
-    ($msg:expr) => {
-        println!("\x1b[93;1m*\x1b[0m {}", $msg)
-    };
-    ($fmt:expr, $($args:expr),*) => {
-        info!(format!($fmt, $($args),*));
-    };
-}
-
-/// Print info message in green.
-macro_rules! success {
-    ($msg:expr) => {
-        info!("\x1b[92;1m{}\x1b[0m", $msg)
-    };
-    ($fmt:expr, $($args:expr),*) => {
-        success!(format!($fmt, $($args),*));
-    };
-}
-
 fn main() -> Result<(), std::io::Error> {
+    let quiet: bool;
     let args = std::env::args().skip(1).collect::<Vec<String>>();
 
     if args.is_empty() {
         print_usage();
         return Ok(());
+    }
+
+    /// Print info message to the console.
+    macro_rules! info {
+        ($msg:expr) => {
+            if !quiet {
+                println!("\x1b[93;1m*\x1b[0m {}", $msg);
+            }
+        };
+        ($fmt:expr, $($args:expr),*) => {
+            info!(format!($fmt, $($args),*));
+        };
+    }
+
+    /// Print info message in green.
+    macro_rules! success {
+        ($msg:expr) => {
+            info!("\x1b[92;1m{}\x1b[0m", $msg)
+        };
+        ($fmt:expr, $($args:expr),*) => {
+            success!(format!($fmt, $($args),*));
+        };
     }
 
     match args[0].as_ref() {
@@ -53,6 +56,8 @@ fn main() -> Result<(), std::io::Error> {
         command = &args[0];
         path = &args[1];
     };
+
+    quiet = command != "build";
 
     info!("Loading {}", path);
     let source = std::fs::read_to_string(path)?;
