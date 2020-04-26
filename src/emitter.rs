@@ -12,6 +12,7 @@ chText VAR_ERRORTEXT = "";
 int main(int argc, char* argv[]) {
     cout.precision(numeric_limits<ldpl_number>::digits10);
     for(int i = 1; i < argc; ++i) VAR_ARGV.inner_collection.push_back(argv[i]);
+
 "#;
 
 const MAIN_FOOTER: &'static str = r#"
@@ -155,13 +156,16 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut out = vec![];
 
     out.push(match pair.as_rule() {
-        Rule::call_stmt => "".to_string(),
+        Rule::call_stmt => emit_call_stmt(pair)?,
         Rule::display_stmt => emit_display_stmt(pair)?,
         Rule::store_stmt => emit_store_stmt(pair)?,
         Rule::solve_stmt => "".to_string(),
         Rule::if_stmt => emit_if_stmt(pair)?,
         Rule::else_stmt => "".to_string(),
         Rule::while_stmt => emit_while_stmt(pair)?,
+        Rule::user_stmt => {
+            panic!("Unexpected user_stmt: {:?}", pair);
+        }
         _ => "".to_string(),
     });
 
@@ -176,13 +180,20 @@ fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     Ok(format!("{} = {};\n", mangle_var(ident), val))
 }
 
-/// DISPLAY _...
+/// CALL _ WITH _ ...
+fn emit_call_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    println!("CALL: {:?}", pair);
+    Ok("TODO".to_string())
+}
+
+/// DISPLAY _ ...
 fn emit_display_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut parts = vec!["cout".to_string()];
     let expr_list = pair.into_inner().next().unwrap();
     for node in expr_list.into_inner() {
         parts.push(emit_expr(node)?);
     }
+    parts.push("flush".into());
     Ok(format!("{};\n", parts.join(" << ")))
 }
 
