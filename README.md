@@ -23,7 +23,7 @@ Android systems.
 ## Building It
 
 LDPL-RS requires [**cargo**][rustup], [**Rust**][rustup],
-[**git**][git], and a [**C++ compiler**][cxx-compiler] to build. Once
+[**git**][git], and a [**C++ compiler**][cpp-compiler] to build. Once
 you have all those, installation is a breeze:
 
     git clone git://github.com/xvxx/ldpl-rs
@@ -44,4 +44,4 @@ To take it with you, just copy `./target/release/ldpl-rs` to
 [pest]: https://pest.rs/
 [rustup]: http://rustup.io/
 [git]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
-[cxx-compiler]: https://gcc.gnu.org/install/
+[cpp-compiler]: https://gcc.gnu.org/install/

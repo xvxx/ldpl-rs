@@ -27,7 +27,7 @@ pub fn emit(ast: Pairs<Rule>) -> LDPLResult<String> {
 
     for pair in ast {
         match pair.as_rule() {
-            Rule::cxx_ext_stmt => todo!(),
+            Rule::cpp_ext_stmt => todo!(),
             Rule::data_section => out.push(emit_data(pair)?),
             Rule::create_stmt_stmt => todo!(),
             Rule::sub_def_stmt => out.push(emit_sub_def_stmt(pair)?),
