@@ -123,7 +123,7 @@ var = ${ lookup | ident }
 expr = _{ linefeed | var | number | text }
 
 // expr list: one two "three" 4 5 "six"
-expr_list = @{ expr ~ (" " ~ expr)* }
+expr_list = ${ expr ~ (" " ~ expr)* }
 
 // create a statement... statment
 create_stmt_stmt = { ^"CREATE" ~ ^"STATEMENT" ~ text ~ ^"EXECUTING" ~ ident }
@@ -258,7 +258,7 @@ exit_stmt = { ^"EXIT" }
 wait_stmt = { ^"WAIT" ~ expr ~ ^"MILLISECONDS" }
 
 call_stmt = { call_external_stmt | call_sub_stmt }
-call_sub_stmt = { call_legacy_stmt | call_newstyle_stmt }
+call_sub_stmt = _{ call_legacy_stmt | call_newstyle_stmt }
 call_external_stmt = _{ ^"CALL" ~ ^"EXTERNAL" ~ var ~ (^"WITH" ~ expr_list)? }
 call_legacy_stmt = _{ ^"CALL" ~ ^"SUB-PROCEDURE" ~ var ~ (^"WITH" ~ expr_list)? }
 call_newstyle_stmt = _{ ^"CALL" ~ var ~ (^"WITH" ~ expr_list)? }

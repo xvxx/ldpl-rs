@@ -124,7 +124,7 @@ fn emit_params(pair: Pair<Rule>) -> LDPLResult<String> {
         let mut parts = def.into_inner();
         let ident = parts.next().unwrap().as_str();
         let typename = parts.next().unwrap().as_str();
-        out.push(format!("{} {}", type_for(typename), mangle_var(ident),));
+        out.push(format!("{}& {}", type_for(typename), mangle_var(ident),));
     }
 
     Ok(out.join(", "))
@@ -139,9 +139,7 @@ fn emit_sub_def_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 
     for node in pair.into_inner() {
         match node.as_rule() {
-            Rule::ident => {
-                name = mangle_sub(node.as_str());
-            }
+            Rule::ident => name = mangle_sub(node.as_str()),
             Rule::sub_param_section => params = emit_params(node)?,
             Rule::sub_data_section => vars = emit_data(node)?,
             _ => body.push(emit_subproc_stmt(node)?),
@@ -240,16 +238,36 @@ fn emit_solve_expr(pair: Pair<Rule>) -> LDPLResult<String> {
 fn emit_call_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
     let ident = iter.next().unwrap();
+
+    let mut var_id = 0;
+    let mut prefix = vec![];
+
     let mut params = vec![];
-    for param in iter {
-        params.push(emit_expr(param)?);
+    for param in iter.next().unwrap().into_inner() {
+        match param.as_rule() {
+            Rule::number => {
+                let var = format!("LPVAR_{}", var_id);
+                prefix.push(format!("ldpl_number {} = {};", var, emit_expr(param)?));
+                params.push(var);
+                var_id += 1;
+            }
+            Rule::text | Rule::linefeed => {
+                let var = format!("LPVAR_{}", var_id);
+                prefix.push(format!("chText {} = {};", var, emit_expr(param)?));
+                params.push(var);
+                var_id += 1;
+            }
+            Rule::var => params.push(emit_expr(param)?),
+            _ => unexpected!(param),
+        }
     }
 
-    if params.is_empty() {
-        Ok(format!("{}();", mangle_sub(ident.as_str())))
-    } else {
-        todo!()
-    }
+    Ok(format!(
+        "{}\n{}({});\n",
+        prefix.join("\n"),
+        mangle_sub(ident.as_str()),
+        params.join(", ")
+    ))
 }
 
 /// DISPLAY _ ...
@@ -312,9 +330,7 @@ fn emit_expr(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::number => pair.as_str().to_string(),
         Rule::text => pair.as_str().to_string(),
         Rule::linefeed => "\"\\n\"".to_string(),
-        _ => {
-            panic!("UNIMPLEMENTED: {:?}", pair);
-        }
+        _ => panic!("UNIMPLEMENTED: {:?}", pair),
     })
 }
 
