@@ -23,22 +23,22 @@ just fine with regular LDPL extensions.
 
 ## Building It
 
-LDPL-RS requires [**cargo**][rustup], [**Rust**][rustup],
+LDPL-RS requires **make**, [**cargo**][rustup], [**Rust**][rustup],
 [**git**][git], and a [**C++ compiler**][cpp-compiler] to build. Once
 you have all those, installation is a breeze:
 
     git clone git://github.com/xvxx/ldpl-rs
     cd ldpl-rs
-    cargo build --release
+    make
 
 If that works, you've successfully built an `ldpl-rs` binary that you
 can use to run any of the official LDPL examples:
 
     git clone -b 4.4 git://github.com/lartu/ldpl
-    ./target/release/ldpl-rs examples/99bottles.ldpl
+    ldpl-rs examples/99bottles.ldpl
 
-To take it with you, just copy `./target/release/ldpl-rs` to
-`/usr/local/bin` or wherever in your `$PATH`.
+To take it with you, just copy `ldpl-rs` to `/usr/local/bin` or
+something else in your `$PATH`.
 
 ## Status
 
@@ -59,6 +59,124 @@ done, we'll move onto these four, higher level goals:
 | 🚧         | `GILD`        | Planned      |
 | 🚧         | `Lute`        | Planned      |
 | 🚧         | `ldpl-socket` | Planned      |
+
+## Statements
+
+Tracking what we have left to do, based on the docs:
+
+- [ ] flag "-O3"
+- [ ] flag linux "-O3"
+- [ ] extension "something.cpp"
+- [ ] DATA:
+  - [ ] var IS type
+    - [ ] support LDPL var names
+    - [ ] LDPL var name => C++ var name
+    - [ ] NUMBER
+    - [ ] TEXT
+    - [ ] NUMBER LIST
+    - [ ] NUMBER MAP
+    - [ ] TEXT LIST
+    - [ ] TEXT MAP
+    - [ ] MAP OF ...
+    - [ ] LIST OF ...
+  - [ ] Predeclared variables
+    - [ ] ARGV IS TEXT LIST
+    - [ ] ERRORTEXT IS TEXT
+    - [ ] ERRORCODE IS NUMBER
+- [ ] PROCEDURE:
+  - [ ] NUMBER literals
+    - [ ] regular
+    - [ ] decimal
+    - [ ] negative
+    - [ ] +10 isn't valid
+  - [ ] TEXT literals
+    - [ ] TEXT escape codes
+      - [ ] \a = alert (bell)
+      - [ ] \b = backspace
+      - [ ] \t = horizontal tab
+      - [ ] \n = newline / line feed
+      - [ ] \v = vertical tab
+      - [ ] \f = form feed
+      - [ ] \r = carriage return
+      - [ ] \e = non-standard GCC escape
+      - [ ] \0 = null byte
+      - [ ] \\ = \ character
+      - [ ] \" = " character
+  - [ ] LIST lookup a:1
+  - [ ] MAP lookup b:"name"
+  - [ ] SUB-PROCEDURE
+    - [ ] SUB syntax
+    - [ ] END SUB / END SUB-PROCEDURE syntax
+    - [ ] PARAMETERS: section
+    - [ ] LOCAL DATA: section
+    - [ ] PROCEDURE: section
+- [ ] CONTROL FLOW
+  - [ ] STORE _ IN _
+  - [ ] IF _ IS _ THEN
+  - [ ] ELSE IF _ IS _ THEN
+  - [ ] WHILE _ IS _ DO
+  - [ ] FOR _ FROM _ TO _ STEP _ DO
+  - [ ] FOR EACH _ IN _ DO
+  - [ ] BREAK
+  - [ ] CONTINUE
+  - [ ] CALL SUB-PROCEDURE
+  - [ ] RETURN
+  - [ ] EXIT
+  - [ ] WAIT \_ MILLISECONDS
+  - [ ] GOTO and LABEL
+  - [ ] CREATE STATEMENT _ EXECUTING _
+  - [ ] CALL EXTERNAL \_
+- [ ] ARITHMETIC
+  - [ ] IN _ SOLVE _
+  - [ ] FLOOR
+  - [ ] CEIL
+  - [ ] FLOOR _ IN _
+  - [ ] CEIL _ IN _
+  - [ ] MODULO _ BY _ IN \_
+  - [ ] GET RANDOM IN \_
+  - [ ] RAISE _ TO THE _ IN \_
+  - [ ] LOG _ IN _
+  - [ ] SIN _ IN _
+  - [ ] COS _ IN _
+  - [ ] TAN _ IN _
+- [ ] TEXT
+  - [ ] IN _ JOIN _
+  - [ ] REPLACE _ FROM _ WITH _ IN _
+  - [ ] SPLIT _ BY _ IN \_
+  - [ ] GET CHARACTER AT _ FROM _ IN \_
+  - [ ] GET LENGTH OF _ IN _
+  - [ ] GET ASCII CHARACTER _ IN _
+  - [ ] GET CHARACTER CODE OF _ IN _
+  - [ ] STORE QUOTE _ IN _
+  - [ ] GET INDEX OF _ FROM _ IN \_
+  - [ ] COUNT _ FROM _ IN \_
+  - [ ] SUBSTRING _ FROM _ LENGTH _ IN _
+  - [ ] TRIM _ IN _
+- [ ] LIST
+  - [ ] PUSH _ TO _
+  - [ ] CLEAR
+  - [ ] COPY _ TO _
+  - [ ] GET LENGTH OF _ IN _
+  - [ ] DELETE LAST ELEMENT OF \_
+- [ ] MAP
+  - [ ] CLEAR
+  - [ ] COPY _ TO _
+  - [ ] GET KEY COUNT OF _ IN _
+  - [ ] GET KEYS OF _ IN _
+- [ ] IO
+  - [ ] DISPLAY
+  - [ ] ACCEPT \_
+  - [ ] EXECUTE \_
+  - [ ] EXECUTE _ AND STORE OUTPUT IN _
+  - [ ] EXECUTE _ AND STORE EXIT CODE IN _
+  - [ ] ACCEPT \_ UNTIL EOF
+  - [ ] LOAD FILE _ IN _
+  - [ ] WRITE _ TO FILE _
+  - [ ] APPEND _ TO FILE _
+- [ ] C++ EXTENSIONS
+  - [ ] var IS EXTERNAL type
+  - [ ] CALL EXTERNAL
+  - [ ] EXTERNAL SUB(-PROCEDURE)
 
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
