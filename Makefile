@@ -3,3 +3,6 @@ build: target/release/ldpl-rs
 
 target/release/ldpl-rs: src/*.rs
 	cargo build --release
+
+test:
+	cargo test

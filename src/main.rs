@@ -9,7 +9,7 @@ const DEFAULT_COMMAND: &str = "build";
 
 fn main() -> Result<(), std::io::Error> {
     let quiet: bool;
-    let args = std::env::args().skip(1).collect::<Vec<String>>();
+    let mut args = std::env::args().skip(1).collect::<Vec<String>>();
 
     if args.is_empty() {
         print_usage();
@@ -51,6 +51,7 @@ fn main() -> Result<(), std::io::Error> {
 
     let mut command = DEFAULT_COMMAND;
     let mut path = "";
+    let mut bin = String::new();
 
     match args[0].as_ref() {
         "-h" | "--help" | "-help" | "help" => {
@@ -61,22 +62,24 @@ fn main() -> Result<(), std::io::Error> {
             print_version();
             return Ok(());
         }
-        "emit" | "-r" => {
-            command = "emit";
-            path = &args.get(1).unwrap_or_else(|| error!("filename expected."));
+        "emit" | "-r" => command = "emit",
+        "-o" => {
+            args.remove(0);
+            if args.is_empty() {
+                error!("filename expected.");
+            }
+            bin = args.remove(0);
         }
-        "parse" => {
-            command = "parse";
-            path = &args.get(1).unwrap_or_else(|| error!("filename expected."));
-        }
-        "check" => {
-            command = "check";
-            path = &args.get(1).unwrap_or_else(|| error!("filename expected."));
-        }
+        "parse" => command = "parse",
+        "check" => command = "check",
         _ => path = &args[0],
     }
 
     quiet = command != "build";
+
+    if path.is_empty() {
+        path = &args.get(1).unwrap_or_else(|| error!("filename expected."));
+    }
 
     info!("Loading {}", path);
     let source = std::fs::read_to_string(path)?;
@@ -94,17 +97,19 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     let path = Path::new(path);
-    let bin = path
-        .file_stem()
-        .and_then(|f| Some(format!("{}-bin", f.to_string_lossy())))
-        .unwrap_or("ldpl-output-bin".into());
-    let bin = format!(
-        "{}/{}",
-        path.parent()
-            .and_then(|d| Some(d.to_string_lossy()))
-            .unwrap_or(".".into()),
+    let bin = if bin.is_empty() {
+        format!(
+            "{}/{}",
+            path.parent()
+                .and_then(|d| Some(d.to_string_lossy()))
+                .unwrap_or(".".into()),
+            path.file_stem()
+                .and_then(|f| Some(format!("{}-bin", f.to_string_lossy())))
+                .unwrap_or("ldpl-output-bin".into())
+        )
+    } else {
         bin
-    );
+    };
 
     info!("Compiling {}", bin);
     let cpp = emitter::emit(ast)?;
@@ -122,15 +127,40 @@ fn main() -> Result<(), std::io::Error> {
 }
 
 fn print_usage() {
-    print!(
-        r#"Usage: ldpl-rs [COMMAND] <file.ldpl>
-
-Commands:
-  parse       Parse and print syntax tree.
-  check       Check for compile errors only.
-  emit        Print C++ code.
-  build       Compile binary. (default)
+    print!("\n\x1b[95;1mUsage:\x1b[0m");
+    println!(
+        r#"
+    ldpl-rs [options] <command> <file.ldpl>
+    ldpl-rs [-i='<included file>']... <source file>|-c
+            [-o='<output name>'|-r] [-f='<c++ flag>']... [-n]
+    ldpl-rs [-v|-h]
 "#
+    );
+    print!("\x1b[95;1mCommands:\x1b[0m");
+    println!(
+        r#"
+    parse       Parse and print syntax tree.
+    check       Check for errors only.
+    emit        Print C++ code. (same as -r)
+    build       Compile binary. (default)
+"#
+    );
+    print!("\x1b[95;1mOptions:\x1b[0m");
+    print!(
+        r#"
+    -v --version             Display LDPL version information
+    -h --help                Display this information
+    -r                       Display generated C++ code
+    -o=<name>                Set output file for compiled binary
+    -i=<file>                Include file in current compilation
+    -f=<flag>                Pass a flag to the C++ compiler
+    -c                       Compile from standard input
+"#,
+    );
+    println!(
+        "
+  Documentation for LDPL can be found at \x1b[96;1mhttps://docs.ldpl-lang.org\x1b[0m
+  "
     );
 }
 

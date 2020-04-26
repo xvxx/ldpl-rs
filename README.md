@@ -67,22 +67,23 @@ Tracking what we have left to do, based on the docs:
 - [ ] flag "-O3"
 - [ ] flag linux "-O3"
 - [ ] extension "something.cpp"
+- [ ] include "file.ldpl"
 - [ ] DATA:
   - [ ] var IS type
-    - [ ] support LDPL var names
-    - [ ] LDPL var name => C++ var name
-    - [ ] NUMBER
-    - [ ] TEXT
-    - [ ] NUMBER LIST
-    - [ ] NUMBER MAP
-    - [ ] TEXT LIST
-    - [ ] TEXT MAP
+    - [x] support LDPL var names
+    - [x] LDPL var name => C++ var name
+    - [x] NUMBER
+    - [x] TEXT
+    - [x] NUMBER LIST
+    - [x] NUMBER MAP
+    - [x] TEXT LIST
+    - [x] TEXT MAP
     - [ ] MAP OF ...
     - [ ] LIST OF ...
-  - [ ] Predeclared variables
-    - [ ] ARGV IS TEXT LIST
-    - [ ] ERRORTEXT IS TEXT
-    - [ ] ERRORCODE IS NUMBER
+  - [x] Predeclared variables
+    - [x] ARGV IS TEXT LIST
+    - [x] ERRORTEXT IS TEXT
+    - [x] ERRORCODE IS NUMBER
 - [ ] PROCEDURE:
   - [ ] NUMBER literals
     - [ ] regular
@@ -111,15 +112,16 @@ Tracking what we have left to do, based on the docs:
     - [ ] LOCAL DATA: section
     - [ ] PROCEDURE: section
 - [ ] CONTROL FLOW
-  - [ ] STORE _ IN _
-  - [ ] IF _ IS _ THEN
-  - [ ] ELSE IF _ IS _ THEN
-  - [ ] WHILE _ IS _ DO
+  - [x] STORE _ IN _
+  - [x] IF _ IS _ THEN
+  - [x] ELSE IF _ IS _ THEN
+  - [x] WHILE _ IS _ DO
   - [ ] FOR _ FROM _ TO _ STEP _ DO
   - [ ] FOR EACH _ IN _ DO
   - [ ] BREAK
   - [ ] CONTINUE
-  - [ ] CALL SUB-PROCEDURE
+  - [x] CALL _
+    - [x] CALL _ WITH ...
   - [ ] RETURN
   - [ ] EXIT
   - [ ] WAIT \_ MILLISECONDS
@@ -127,7 +129,7 @@ Tracking what we have left to do, based on the docs:
   - [ ] CREATE STATEMENT _ EXECUTING _
   - [ ] CALL EXTERNAL \_
 - [ ] ARITHMETIC
-  - [ ] IN _ SOLVE _
+  - [x] IN _ SOLVE _
   - [ ] FLOOR
   - [ ] CEIL
   - [ ] FLOOR _ IN _
@@ -164,8 +166,8 @@ Tracking what we have left to do, based on the docs:
   - [ ] GET KEY COUNT OF _ IN _
   - [ ] GET KEYS OF _ IN _
 - [ ] IO
-  - [ ] DISPLAY
-  - [ ] ACCEPT \_
+  - [x] DISPLAY
+  - [x] ACCEPT \_
   - [ ] EXECUTE \_
   - [ ] EXECUTE _ AND STORE OUTPUT IN _
   - [ ] EXECUTE _ AND STORE EXIT CODE IN _
