@@ -42,7 +42,9 @@ To take it with you, just copy `./target/release/ldpl-rs` to
 
 ## Status
 
-We have four goals before this project is considered "complete":
+This project is in its infancy. It's currently focused on implementing
+all LDPL 4.4 statements, including C++ extension support. Once that's
+done, we'll move onto these four, higher level goals:
 
 1. Support the same `--flags` as the official compiler.
 2. Compile all LDPL 4.4 `examples/`.
@@ -60,6 +62,7 @@ We have four goals before this project is considered "complete":
 
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
+[ldpl-docs]: http://docs.ldpl-lang.org/
 [pest]: https://pest.rs/
 [rustup]: http://rustup.rs/
 [git]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
