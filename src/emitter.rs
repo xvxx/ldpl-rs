@@ -243,22 +243,24 @@ fn emit_call_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut prefix = vec![];
 
     let mut params = vec![];
-    for param in iter.next().unwrap().into_inner() {
-        match param.as_rule() {
-            Rule::number => {
-                let var = format!("LPVAR_{}", var_id);
-                prefix.push(format!("ldpl_number {} = {};", var, emit_expr(param)?));
-                params.push(var);
-                var_id += 1;
+    if let Some(expr_list) = iter.next() {
+        for param in expr_list.into_inner() {
+            match param.as_rule() {
+                Rule::number => {
+                    let var = format!("LPVAR_{}", var_id);
+                    prefix.push(format!("ldpl_number {} = {};", var, emit_expr(param)?));
+                    params.push(var);
+                    var_id += 1;
+                }
+                Rule::text | Rule::linefeed => {
+                    let var = format!("LPVAR_{}", var_id);
+                    prefix.push(format!("chText {} = {};", var, emit_expr(param)?));
+                    params.push(var);
+                    var_id += 1;
+                }
+                Rule::var => params.push(emit_expr(param)?),
+                _ => unexpected!(param),
             }
-            Rule::text | Rule::linefeed => {
-                let var = format!("LPVAR_{}", var_id);
-                prefix.push(format!("chText {} = {};", var, emit_expr(param)?));
-                params.push(var);
-                var_id += 1;
-            }
-            Rule::var => params.push(emit_expr(param)?),
-            _ => unexpected!(param),
         }
     }
 
