@@ -168,12 +168,12 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::else_stmt => return error!("unexpected ELSE statement"),
         Rule::while_stmt => emit_while_stmt(pair)?,
         Rule::accept_stmt => emit_accept_stmt(pair)?,
+        Rule::execute_stmt => emit_execute_stmt(pair)?,
+        Rule::trim_stmt => emit_trim_stmt(pair)?,
         Rule::user_stmt => {
             panic!("Unexpected user_stmt: {:?}", pair);
         }
-        _ => {
-            panic!("Unexpected stmt: {:?}", pair);
-        }
+        _ => unexpected!(pair),
     });
 
     Ok(out.join(""))
@@ -202,6 +202,39 @@ fn emit_accept_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     };
 
     Ok(format!("{} = {};\n", mangle_var(ident), fun))
+}
+
+/// TRIM _ IN _
+fn emit_trim_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let expr = emit_expr(iter.next().unwrap())?;
+    let var = mangle_var(iter.next().unwrap().as_str());
+    Ok(format!("{} = trimCopy({});", var, expr))
+}
+
+/// EXECUTE _
+/// EXECUTE _ AND STORE EXIT CODE IN _
+/// EXECUTE _ AND STORE OUTPUT IN _
+fn emit_execute_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let pair = pair.into_inner().next().unwrap();
+    let rule = pair.as_rule();
+    let mut iter = pair.into_inner();
+    Ok(match rule {
+        Rule::execute_expr_stmt => format!("system({});", emit_expr(iter.next().unwrap())?),
+        Rule::execute_output_stmt => {
+            let var = mangle_var(iter.next().unwrap().as_str());
+            format!("{} = exec({});", var, emit_expr(iter.next().unwrap())?)
+        }
+        Rule::execute_exit_code_stmt => {
+            let var = mangle_var(iter.next().unwrap().as_str());
+            format!(
+                "{} = (system({}) >> 8) & 0xff;", //shift wait() val and get lowest 2
+                var,
+                emit_expr(iter.next().unwrap())?
+            )
+        }
+        _ => unexpected!(rule),
+    })
 }
 
 /// IN _ SOLVE X

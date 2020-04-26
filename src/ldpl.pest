@@ -397,7 +397,7 @@ accept_stmt = { accept_eof_stmt | accept_var_stmt }
 accept_var_stmt = { ^"ACCEPT" ~ var }
 accept_eof_stmt = { ^"ACCEPT" ~ var ~ ^"UNTIL" ~ ^"EOF" }
 
-execute_stmt = _{ execute_exit_code_stmt | execute_output_stmt | execute_expr_stmt }
+execute_stmt = { execute_exit_code_stmt | execute_output_stmt | execute_expr_stmt }
 execute_expr_stmt = { ^"EXECUTE" ~ expr }
 execute_output_stmt = { ^"EXECUTE" ~ expr ~ ^"AND" ~ ^"STORE" ~ ^"OUTPUT" ~ ^"IN" ~ var }
 execute_exit_code_stmt = { ^"EXECUTE" ~ expr ~ ^"AND" ~ ^"STORE" ~ ^"EXIT" ~ ^"CODE" ~ ^"IN" ~ var }

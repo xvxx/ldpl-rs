@@ -120,8 +120,8 @@ Tracking what we have left to do, based on the docs:
   - [ ] FOR EACH _ IN _ DO
   - [ ] BREAK
   - [ ] CONTINUE
-  - [x] CALL _
-    - [x] CALL _ WITH ...
+  - [x] CALL \_
+    - [x] CALL \_ WITH ...
   - [ ] RETURN
   - [ ] EXIT
   - [ ] WAIT \_ MILLISECONDS
@@ -153,7 +153,7 @@ Tracking what we have left to do, based on the docs:
   - [ ] GET INDEX OF _ FROM _ IN \_
   - [ ] COUNT _ FROM _ IN \_
   - [ ] SUBSTRING _ FROM _ LENGTH _ IN _
-  - [ ] TRIM _ IN _
+  - [x] TRIM _ IN _
 - [ ] LIST
   - [ ] PUSH _ TO _
   - [ ] CLEAR
@@ -168,10 +168,10 @@ Tracking what we have left to do, based on the docs:
 - [ ] IO
   - [x] DISPLAY
   - [x] ACCEPT \_
-  - [ ] EXECUTE \_
-  - [ ] EXECUTE _ AND STORE OUTPUT IN _
-  - [ ] EXECUTE _ AND STORE EXIT CODE IN _
-  - [ ] ACCEPT \_ UNTIL EOF
+  - [x] ACCEPT \_ UNTIL EOF
+  - [x] EXECUTE \_
+  - [x] EXECUTE _ AND STORE OUTPUT IN _
+  - [x] EXECUTE _ AND STORE EXIT CODE IN _
   - [ ] LOAD FILE _ IN _
   - [ ] WRITE _ TO FILE _
   - [ ] APPEND _ TO FILE _
