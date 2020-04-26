@@ -49,14 +49,14 @@ We have four goals before this project is considered "complete":
 3. Pass all LDPL 4.4 [tests].
 4. Compile popular LDPL 4.4 [projects].
 
-| Status | Goal          | Comments |
-| ------ | ------------- | -------- |
-| 🚧     | `--flags`     | Planned  |
-| 👷     | `examples/`   | Active   |
-| 🚧     | `ldpltests`   | Planned  |
-| 🚧     | `GILD`        | Planned  |
-| 🚧     | `Lute`        | Planned  |
-| 🚧     | `ldpl-socket` | Planned  |
+| **Status** | **Goal**      | **Comments** |
+| ---------- | ------------- | ------------ |
+| 👷         | `examples/`   | Active       |
+| 🚧         | `ldpltests`   | Planned      |
+| 🚧         | `--flags`     | Planned      |
+| 🚧         | `GILD`        | Planned      |
+| 🚧         | `Lute`        | Planned      |
+| 🚧         | `ldpl-socket` | Planned      |
 
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
