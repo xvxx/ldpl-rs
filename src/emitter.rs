@@ -159,9 +159,9 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::call_stmt => emit_call_stmt(pair)?,
         Rule::display_stmt => emit_display_stmt(pair)?,
         Rule::store_stmt => emit_store_stmt(pair)?,
-        Rule::solve_stmt => "".to_string(),
+        Rule::solve_stmt => emit_solve_stmt(pair)?,
         Rule::if_stmt => emit_if_stmt(pair)?,
-        Rule::else_stmt => "".to_string(),
+        Rule::else_stmt => return error!("unexpected ELSE statement"),
         Rule::while_stmt => emit_while_stmt(pair)?,
         Rule::user_stmt => {
             panic!("Unexpected user_stmt: {:?}", pair);
@@ -178,6 +178,36 @@ fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let val = iter.next().unwrap().as_str();
     let ident = iter.next().unwrap().as_str();
     Ok(format!("{} = {};\n", mangle_var(ident), val))
+}
+
+/// IN _ SOLVE X
+fn emit_solve_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let ident = iter.next().unwrap().as_str();
+
+    Ok(format!(
+        "{} = {};\n",
+        mangle_var(ident),
+        emit_solve_expr(iter.next().unwrap())?
+    ))
+}
+
+// Math expression part of a SOLVE statement
+fn emit_solve_expr(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut parts = vec![];
+
+    for part in pair.into_inner() {
+        match part.as_rule() {
+            Rule::var | Rule::number | Rule::text => parts.push(emit_expr(part)?),
+            Rule::solve_expr => parts.push(emit_solve_expr(part)?),
+            Rule::math_op => parts.push(part.as_str().to_string()),
+            _ => {
+                panic!("unexpected rule: {:?}", part);
+            }
+        }
+    }
+
+    Ok(parts.join(" "))
 }
 
 /// CALL _ WITH _ ...

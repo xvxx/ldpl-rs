@@ -280,7 +280,12 @@ arithmetic_stmt = _{
 }
 
 math_op = { "+" | "-" | "*" | "/" | "^" }
-solve_expr = { ("(" | ")" | number | var | math_op)+ }
+solve_expr = {
+    "("?
+    ~ ( expr | "(" ~ solve_expr ~ ")" ) ~ math_op ~ ( expr | "(" ~ solve_expr ~ ")" )
+    ~ ")"?
+}
+
 solve_stmt = { ^"IN" ~ var ~ ^"SOLVE" ~ solve_expr }
 
 floor_stmt = { floor_in_stmt | floor_expr_stmt }
