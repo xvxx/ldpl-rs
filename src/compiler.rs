@@ -13,15 +13,17 @@ pub fn compile(cpp_code: &str, outfile: Option<&str>) -> LDPLResult<()> {
 
     let target = outfile.unwrap_or("ldpl-output-bin");
 
-    let out = Command::new("c++")
+    let cmd = Command::new("c++")
         .arg("ldpl-temp.cpp")
         .arg("-std=gnu++11")
         .arg("-w")
         .arg("-o")
         .arg(target)
-        .spawn();
+        .output();
 
     fs::remove_file(filename)?;
-    out?;
+
+    println!("status: {:?}", cmd?.stdout);
+
     Ok(())
 }
