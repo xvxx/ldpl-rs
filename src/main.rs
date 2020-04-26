@@ -9,7 +9,7 @@ const DEFAULT_COMMAND: &str = "build";
 
 fn main() -> Result<(), std::io::Error> {
     let quiet: bool;
-    let mut args = std::env::args().skip(1).collect::<Vec<String>>();
+    let args = std::env::args().skip(1).collect::<Vec<String>>();
 
     if args.is_empty() {
         print_usage();
@@ -53,6 +53,19 @@ fn main() -> Result<(), std::io::Error> {
     let mut path = "";
     let mut bin = String::new();
 
+    // split args on = so -o=file is the same as -o file
+    let mut new_args = vec![];
+    for arg in args {
+        if arg.contains('=') {
+            for part in arg.split("=") {
+                new_args.push(part.to_string());
+            }
+        } else {
+            new_args.push(arg);
+        }
+    }
+    let mut args = new_args;
+
     match args[0].as_ref() {
         "-h" | "--help" | "-help" | "help" => {
             print_usage();
@@ -66,9 +79,9 @@ fn main() -> Result<(), std::io::Error> {
         "-o" => {
             args.remove(0);
             if args.is_empty() {
-                error!("filename expected.");
+                error!("binary name expected.");
             }
-            bin = args.remove(0);
+            bin = args[0].clone();
         }
         "parse" => command = "parse",
         "check" => command = "check",
@@ -107,6 +120,8 @@ fn main() -> Result<(), std::io::Error> {
                 .and_then(|f| Some(format!("{}-bin", f.to_string_lossy())))
                 .unwrap_or("ldpl-output-bin".into())
         )
+        .trim_matches('/')
+        .into()
     } else {
         bin
     };
