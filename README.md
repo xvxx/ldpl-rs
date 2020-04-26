@@ -17,8 +17,9 @@
 
 This is an experimental **LDPL 4.4** compiler written in Rust. Like
 the official compiler, LDPL code is translated to C++ code and then
-compiled into a standalone binary. It works on Linux, macOS, and
-Android systems.
+compiled into a standalone binary. Generated code should be 100%
+compatible with the official compiler, meaning LDPL-RS should work
+just fine with regular LDPL extensions.
 
 ## Building It
 
@@ -39,9 +40,32 @@ can use to run any of the official LDPL examples:
 To take it with you, just copy `./target/release/ldpl-rs` to
 `/usr/local/bin` or wherever in your `$PATH`.
 
+## Status
+
+We have four goals before this project is considered "complete":
+
+1. Support the same `--flags` as the official compiler.
+2. Compile all LDPL 4.4 `examples/`.
+3. Pass all LDPL 4.4 [tests].
+4. Compile popular LDPL 4.4 [projects].
+
+| Status | Goal          | Comments |
+| ------ | ------------- | -------- |
+| 🚧     | `--flags`     | Planned  |
+| 👷     | `examples/`   | Active   |
+| 🚧     | `ldpltests`   | Planned  |
+| 🚧     | `GILD`        | Planned  |
+| 🚧     | `Lute`        | Planned  |
+| 🚧     | `ldpl-socket` | Planned  |
+
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
 [pest]: https://pest.rs/
-[rustup]: http://rustup.io/
+[rustup]: http://rustup.rs/
 [git]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 [cpp-compiler]: https://gcc.gnu.org/install/
+[tests]: https://github.com/Lartu/ldpltest
+[projects]: https://www.ldpl-lang.org/projects.html
+[gild]: https://github.com/xvxx/gild
+[lute]: https://github.com/lartu/lute
+[ldpl-socket]: https://github.com/xvxx/ldpl-socket
