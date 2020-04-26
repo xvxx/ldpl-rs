@@ -38,6 +38,20 @@ fn main() -> Result<(), std::io::Error> {
         };
     }
 
+    /// Print error message to the console.
+    macro_rules! error {
+        ($msg:expr) => {{
+            eprintln!("\x1b[91;1mLDPL Error: {}\x1b[0m", $msg);
+            std::process::exit(1);
+        }};
+        ($fmt:expr, $($args:expr),*) => {
+            info!(format!($fmt, $($args),*));
+        };
+    }
+
+    let mut command = DEFAULT_COMMAND;
+    let mut path = "";
+
     match args[0].as_ref() {
         "-h" | "--help" | "-help" | "help" => {
             print_usage();
@@ -47,15 +61,20 @@ fn main() -> Result<(), std::io::Error> {
             print_version();
             return Ok(());
         }
-        _ => {}
+        "emit" | "-r" => {
+            command = "emit";
+            path = &args.get(1).unwrap_or_else(|| error!("filename expected."));
+        }
+        "parse" => {
+            command = "parse";
+            path = &args.get(1).unwrap_or_else(|| error!("filename expected."));
+        }
+        "check" => {
+            command = "check";
+            path = &args.get(1).unwrap_or_else(|| error!("filename expected."));
+        }
+        _ => path = &args[0],
     }
-
-    let mut command = DEFAULT_COMMAND;
-    let mut path = &args[0];
-    if args.len() >= 2 {
-        command = &args[0];
-        path = &args[1];
-    };
 
     quiet = command != "build";
 
@@ -63,7 +82,8 @@ fn main() -> Result<(), std::io::Error> {
     let source = std::fs::read_to_string(path)?;
 
     info!("Parsing {}", path);
-    let ast = LDPLParser::parse(Rule::program, &source).unwrap();
+    let ast = LDPLParser::parse(Rule::program, &source)
+        .unwrap_or_else(|e| error!(format!("{} failed to parse.\n\x1b[0m{}", path, e)));
     if command == "parse" {
         print_ast(ast);
         return Ok(());
