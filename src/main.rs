@@ -91,6 +91,7 @@ fn run() -> LDPLResult<()> {
                 }
                 bin = args.remove(0);
             }
+            "-i" | "-f" | "-c" => todo!(),
             "parse" => command = "parse",
             "check" => command = "check",
             "build" => command = "build",
