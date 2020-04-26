@@ -258,9 +258,9 @@ exit_stmt = { ^"EXIT" }
 wait_stmt = { ^"WAIT" ~ expr ~ ^"MILLISECONDS" }
 
 call_stmt = { call_external_stmt | call_verbose_stmt | call_sub_stmt }
-call_external_stmt = { ^"CALL" ~ ^"EXTERNAL" ~ var ~ (^"WITH" ~ expr_list)? }
-call_verbose_stmt = { ^"CALL" ~ ^"SUB-PROCEDURE" ~ var ~ (^"WITH" ~ expr_list)? }
-call_sub_stmt = { ^"CALL" ~ var ~ (^"WITH" ~ expr_list)? }
+call_external_stmt = _{ ^"CALL" ~ ^"EXTERNAL" ~ var ~ (^"WITH" ~ expr_list)? }
+call_verbose_stmt = _{ ^"CALL" ~ ^"SUB-PROCEDURE" ~ var ~ (^"WITH" ~ expr_list)? }
+call_sub_stmt = _{ ^"CALL" ~ var ~ (^"WITH" ~ expr_list)? }
 
 ////
 // ARITHMETIC

@@ -182,8 +182,18 @@ fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 
 /// CALL _ WITH _ ...
 fn emit_call_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
-    println!("CALL: {:?}", pair);
-    Ok("TODO".to_string())
+    let mut iter = pair.into_inner();
+    let ident = iter.next().unwrap();
+    let mut params = vec![];
+    for param in iter {
+        params.push(emit_expr(param)?);
+    }
+
+    if params.is_empty() {
+        Ok(format!("{}();", mangle_sub(ident.as_str())))
+    } else {
+        todo!()
+    }
 }
 
 /// DISPLAY _ ...
