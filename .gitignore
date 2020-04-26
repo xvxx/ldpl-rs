@@ -3,3 +3,4 @@ ldpl/
 examples/4.4/*-bin
 ldpltest/
 ldpl-rs
+*-bin
