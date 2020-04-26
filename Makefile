@@ -6,3 +6,7 @@ target/release/ldpl-rs: src/*.rs
 
 test:
 	cargo test
+
+ldpltest: test build
+	cp ldpl-rs ldpltest/
+	cd ldpltest/ && sh compileAndRunTester.sh
