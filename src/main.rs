@@ -57,7 +57,7 @@ fn run() -> LDPLResult<()> {
     }
 
     let mut command = DEFAULT_COMMAND;
-    let mut path = "";
+    let mut path = String::new();
     let mut bin = String::new();
 
     // split args on = so -o=file is the same as -o file
@@ -73,36 +73,41 @@ fn run() -> LDPLResult<()> {
     }
     let mut args = new_args;
 
-    match args[0].as_ref() {
-        "-h" | "--help" | "-help" | "help" => {
-            print_usage();
-            return Ok(());
-        }
-        "-v" | "--version" | "-version" | "version" => {
-            print_version();
-            return Ok(());
-        }
-        "emit" | "-r" => command = "emit",
-        "-o" => {
-            args.remove(0);
-            if args.is_empty() {
-                error!("binary name expected.");
+    while !args.is_empty() {
+        let arg = args.remove(0);
+        match arg.as_ref() {
+            "-h" | "--help" | "-help" | "help" => {
+                print_usage();
+                return Ok(());
             }
-            bin = args[0].clone();
+            "-v" | "--version" | "-version" | "version" => {
+                print_version();
+                return Ok(());
+            }
+            "emit" | "-r" => command = "emit",
+            "-o" => {
+                if args.is_empty() {
+                    error!("binary name expected.");
+                }
+                bin = args.remove(0);
+            }
+            "parse" => command = "parse",
+            "check" => command = "check",
+            "build" => command = "build",
+            _ => path = arg,
         }
-        "parse" => command = "parse",
-        "check" => command = "check",
-        _ => path = &args[0],
     }
 
     quiet = command != "build";
 
-    if path.is_empty() {
-        path = &args.get(1).unwrap_or_else(|| error!("filename expected."));
+    if path.is_empty() && !args.is_empty() {
+        path = args.remove(0);
+    } else if path.is_empty() {
+        error!("filename expected.");
     }
 
     info!("Loading {}", path);
-    let source = std::fs::read_to_string(path)?;
+    let source = std::fs::read_to_string(&path)?;
 
     info!("Parsing {}", path);
     let ast = LDPLParser::parse(Rule::program, &source)
@@ -116,7 +121,7 @@ fn run() -> LDPLResult<()> {
         todo!();
     }
 
-    let path = Path::new(path);
+    let path = Path::new(&path);
     let bin = if bin.is_empty() {
         format!(
             "{}/{}",
