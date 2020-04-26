@@ -1,8 +1,10 @@
 use ldpl::{
-    emitter,
+    compiler, emitter,
     parser::{LDPLParser, Parser, Rule},
 };
 use pest::iterators::Pairs;
+
+const DEFAULT_COMMAND: &str = "build";
 
 fn main() -> Result<(), std::io::Error> {
     let args = std::env::args().skip(1).collect::<Vec<String>>();
@@ -24,7 +26,7 @@ fn main() -> Result<(), std::io::Error> {
         _ => {}
     }
 
-    let mut command = "emit";
+    let mut command = DEFAULT_COMMAND;
     let mut path = &args[0];
     if args.len() >= 2 {
         command = &args[0];
@@ -44,7 +46,12 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     let cpp = emitter::emit(ast)?;
-    println!("{}", cpp);
+    if command == "emit" {
+        println!("{}", cpp);
+        return Ok(());
+    }
+
+    compiler::compile(&cpp, None)?;
     Ok(())
 }
 
@@ -55,7 +62,8 @@ fn print_usage() {
 Commands:
   parse       Parse and print syntax tree.
   check       Check for compile errors only.
-  emit        Print C++ code. (default)
+  emit        Print C++ code.
+  build       Compile binary. (default)
 "#
     );
 }
