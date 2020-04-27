@@ -1,0 +1,121 @@
+# -- Forked version that supports LDPL-RS -- #
+
+# LDPL Programming Language Test Battery Tester
+# by Martín del Río
+# https://github.com/lartu/ldpltest
+
+DATA:
+command is text
+exitCode is number
+testName is text
+fileExpected is text
+fileResults is text
+tests is text vector
+testCount is number
+i is number
+failCount is number
+passCount is number
+testRunner is text
+argc is number
+
+PROCEDURE:
+# ------------------------------------------------------------
+# ADD TESTS HERE
+store "conflow"     in tests:0
+store "basicar"     in tests:1
+store "basictx"     in tests:2
+store "vector"      in tests:3
+store "file"        in tests:4
+store "fibo"        in tests:5
+store "explode"     in tests:6
+store "sqrt"        in tests:7
+store "quine"       in tests:8
+store "exec"        in tests:9
+store "list"        in tests:10
+store "of"          in tests:11
+# ------------------------------------------------------------
+
+sub-procedure execute-command
+    display "\033[90m(" command ")\033[0m" crlf
+    execute command and store exit code in exitCode
+    if exitCode is not equal to 0 then
+        display "\033[91mThe command " command " has failed.\033[0m" crlf
+    end if
+end sub-procedure
+
+sub-procedure compare-results
+    in fileExpected join "tests/" testName ".res"
+    in fileResults join "tests/" testName ".test"
+    load file fileExpected in fileExpected
+    load file fileResults in fileResults
+    if fileExpected is not equal to fileResults then
+        display "\033[91m*** TEST '" testName "' FAILED ***\033[0m" crlf
+        display "\033[90m(" testName ".test not deleted. Please check it)\033[0m" crlf
+        in failCount solve failCount + 1
+    else
+        display "\033[92m*** TEST '" testName "' PASSED ***\033[0m" crlf
+        in command join "cd tests && rm " testName ".test"
+        call execute-command
+        in passCount solve passCount + 1
+    end if
+end sub-procedure
+
+display crlf " \033[90m+----------------------------------------+" crlf
+display " \033[90m| \033[92mLDPL Programming Language\033[96m Test Battery\033[90m |\033[0m" crlf
+display " \033[90m+----------------------------------------+\033[0m" crlf crlf
+
+# optional test runner
+get length of argv in argc
+if argc is greater than 0 then
+    get index of "-r=" from argv:0 in i
+    if i is greater than or equal to 0 then
+        replace "-r=" from argv:0 with "" in testRunner
+    end if
+end if
+
+# Count tests
+store 0 in testCount
+store 0 in i
+display "\033[95mTests found:\033[0m "
+while tests:i is not equal to "" do
+    display tests:i " "
+    in i solve i + 1
+    in testCount solve testCount + 1
+repeat
+
+display "\033[95m(" testCount ")\033[0m" crlf crlf
+
+store 0 in i
+while i is less than testCount do
+    store tests:i in testName
+    display "\033[33mTesting '" testName ".ldpl'\033[0m" crlf
+    if testRunner is equal to "" then
+        in command join "cd tests && ../ldpl-rs " testName ".ldpl -o=" testName " > /dev/null"
+        call execute-command
+        in command join "cd tests && ./" testName " > " testName ".test"
+        call execute-command
+    else
+        in command join "cd tests && " testRunner " " testName ".ldpl > " testName ".test"
+        call execute-command
+    end if
+    call compare-results
+    if testRunner is equal to "" then
+      in command join "cd tests && rm " testName
+      call execute-command
+    end if
+    display crlf
+    in i solve i + 1
+repeat
+
+display "\033[92mPassed: \033[0m" passCount crlf
+display "\033[91mFailed: \033[0m" failCount crlf
+
+display crlf
+
+if failCount is equal to 0 then
+    display "\033[92m*** ALL TESTS PASSED SUCCESSFULLY ***\033[0m" crlf
+else
+    display "\033[91m*** ERRORS FOUND ***\033[0m" crlf
+end if
+
+display crlf

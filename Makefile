@@ -1,12 +1,22 @@
+
+.PHONY: build
 build: target/release/ldpl-rs
 	cp target/release/ldpl-rs .
 
 target/release/ldpl-rs: src/*.rs
 	cargo build --release
 
-test:
-	cargo test
+.PHONY: clean
+clean:
+	cargo clean
+	rm -rf ldpltest
 
-ldpltest: test build
-	cp ldpl-rs ldpltest/
+.PHONY: test
+test: ldpltest build
+	cargo test
 	cd ldpltest/ && sh compileAndRunTester.sh
+
+ldpltest:
+	git clone git://github.com/lartu/ldpltest
+	cd ldpltest && git checkout c42160a41
+	cp lib/tester.ldpl ldpltest/
