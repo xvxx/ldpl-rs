@@ -98,9 +98,9 @@ fn emit_data(pair: Pair<Rule>) -> LDPLResult<String> {
         assert!(def.as_rule() == Rule::type_def);
 
         let mut parts = def.into_inner();
-        let ident = parts.next().unwrap().as_str();
+        let ident = parts.next().unwrap();
         let typename = parts.next().unwrap().as_str();
-        let mut var = format!("{} {}", type_for(typename), mangle_var(ident));
+        let mut var = format!("{} {}", type_for(typename), emit_var(ident)?);
 
         if typename == "number" {
             var.push_str(" = 0");
@@ -122,9 +122,9 @@ fn emit_params(pair: Pair<Rule>) -> LDPLResult<String> {
     for def in pair.into_inner() {
         assert!(def.as_rule() == Rule::type_def);
         let mut parts = def.into_inner();
-        let ident = parts.next().unwrap().as_str();
+        let ident = parts.next().unwrap();
         let typename = parts.next().unwrap().as_str();
-        out.push(format!("{}& {}", type_for(typename), mangle_var(ident),));
+        out.push(format!("{}& {}", type_for(typename), emit_var(ident)?));
     }
 
     Ok(out.join(", "))
@@ -160,18 +160,71 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut out = vec![];
 
     out.push(match pair.as_rule() {
+        // control flow
         Rule::call_stmt => emit_call_stmt(pair)?,
-        Rule::display_stmt => emit_display_stmt(pair)?,
-        Rule::store_stmt => emit_store_stmt(pair)?,
-        Rule::solve_stmt => emit_solve_stmt(pair)?,
         Rule::if_stmt => emit_if_stmt(pair)?,
         Rule::else_stmt => return error!("unexpected ELSE statement"),
         Rule::while_stmt => emit_while_stmt(pair)?,
+        Rule::for_each_stmt => todo!(), //emit_for_each_stmt(pair)?,
+        Rule::for_stmt => todo!(),      //emit_for_stmt(pair)?,
+        Rule::loop_kw_stmt => todo!(),  //emit_loop_kw(pair)?,
+        Rule::return_stmt => todo!(),   //emit_return_stmt(pair)?,
+        Rule::goto_stmt => todo!(),     //emit_goto_stmt(pair)?,
+        Rule::label_stmt => todo!(),    //emit_label_stmt(pair)?,
+        Rule::exit_stmt => todo!(),     //emit_exit_stmt(pair)?,
+        Rule::wait_stmt => todo!(),     //emit_wait_stmt(pair)?,
+        Rule::store_quote_stmt => emit_quote_stmt(pair)?,
+        Rule::store_stmt => emit_store_stmt(pair)?,
+
+        // math
+        Rule::solve_stmt => emit_solve_stmt(pair)?,
+        Rule::floor_stmt => emit_floor_stmt(pair)?,
+        Rule::ceil_stmt => todo!(),
+        Rule::modulo_stmt => emit_modulo_stmt(pair)?,
+        Rule::get_rand_stmt => todo!(),
+        Rule::raise_stmt => todo!(),
+        Rule::log_stmt => todo!(),
+        Rule::sin_stmt => todo!(),
+        Rule::cos_stmt => todo!(),
+        Rule::tan_stmt => todo!(),
+
+        // text
+        Rule::join_stmt => emit_join_stmt(pair)?,
+        Rule::old_join_stmt => emit_old_join_stmt(pair)?,
+        Rule::replace_stmt => todo!(), // emit_replacea_stmt(pair)?,
+        Rule::split_stmt => todo!(),   // emit_split_stmt(pair)?,
+        Rule::get_char_stmt => emit_get_char_stmt(pair)?,
+        Rule::get_ascii_stmt => emit_get_ascii_stmt(pair)?,
+        Rule::get_char_code_stmt => emit_get_char_code_stmt(pair)?,
+        Rule::get_index_stmt => todo!(), // emit_get_index_stmt(pair)?,
+        Rule::count_stmt => todo!(),     // emit_count_stmt(pair)?,
+        Rule::substr_stmt => todo!(),    // emit_substr_stmt(pair)?,
+        Rule::trim_stmt => emit_trim_stmt(pair)?,
+
+        // list
+        Rule::push_stmt => todo!(),   // emit_push_stmt(pair)?,
+        Rule::delete_stmt => todo!(), // emit_delete_stmt(pair)?,
+
+        // map
+        Rule::get_keys_count_stmt => todo!(), // emit_get_keys_count_stmt(pair)?,
+        Rule::get_keys_stmt => todo!(),       // emit_get_keys_stmt(pair)?,
+
+        // list + map
+        Rule::clear_stmt => todo!(), // emit_clear_stmt(pair)?,
+        Rule::copy_stmt => todo!(),  // emit_copy_stmt(pair)?,
+
+        // list + text
+        Rule::get_length_stmt => emit_get_length_stmt(pair)?,
+
+        // io
+        Rule::display_stmt => emit_display_stmt(pair)?,
+        Rule::load_stmt => todo!(),   // emit_load_stmt(pair)?,
+        Rule::write_stmt => todo!(),  // emit_write_stmt(pair)?,
+        Rule::append_stmt => todo!(), // emit_append_stmt(pair)?,
         Rule::accept_stmt => emit_accept_stmt(pair)?,
         Rule::execute_stmt => emit_execute_stmt(pair)?,
-        Rule::trim_stmt => emit_trim_stmt(pair)?,
-        Rule::modulo_stmt => emit_modulo_stmt(pair)?,
-        Rule::floor_stmt => emit_floor_stmt(pair)?,
+
+        // create statement
         Rule::user_stmt => {
             panic!("Unexpected user_stmt: {:?}", pair);
         }
@@ -184,59 +237,17 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 /// STORE _ IN _
 fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
-    let val = iter.next().unwrap().as_str();
-    let ident = iter.next().unwrap().as_str();
-    Ok(format!("{} = {};\n", mangle_var(ident), val))
+    let val = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("{} = {};\n", var, val))
 }
 
-/// ACCEPT _ / ACCEPT _ UNTIL EOF
-fn emit_accept_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
-    let stmt = pair.into_inner().next().unwrap();
-
-    let eof = stmt.as_rule() == Rule::accept_eof_stmt;
-    let ident = stmt.into_inner().next().unwrap().as_str();
-
-    let fun = if eof {
-        "input_until_eof()"
-    } else {
-        // TODO check for text vs number
-        "input_number()"
-    };
-
-    Ok(format!("{} = {};\n", mangle_var(ident), fun))
-}
-
-/// TRIM _ IN _
-fn emit_trim_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+/// STORE QUOTE IN _
+fn emit_quote_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
-    let expr = emit_expr(iter.next().unwrap())?;
-    let var = mangle_var(iter.next().unwrap().as_str());
-    Ok(format!("{} = trimCopy({});", var, expr))
-}
-
-/// EXECUTE _
-/// EXECUTE _ AND STORE EXIT CODE IN _
-/// EXECUTE _ AND STORE OUTPUT IN _
-fn emit_execute_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
-    let pair = pair.into_inner().next().unwrap();
-    let rule = pair.as_rule();
-    let mut iter = pair.into_inner();
-    Ok(match rule {
-        Rule::execute_expr_stmt => format!("system({});", emit_expr(iter.next().unwrap())?),
-        Rule::execute_output_stmt => {
-            let var = mangle_var(iter.next().unwrap().as_str());
-            format!("{} = exec({});", var, emit_expr(iter.next().unwrap())?)
-        }
-        Rule::execute_exit_code_stmt => {
-            let var = mangle_var(iter.next().unwrap().as_str());
-            format!(
-                "{} = (system({}) >> 8) & 0xff;", //shift wait() val and get lowest 2
-                var,
-                emit_expr(iter.next().unwrap())?
-            )
-        }
-        _ => unexpected!(rule),
-    })
+    let var = emit_var(iter.next().unwrap())?;
+    let txt = iter.next().unwrap();
+    Ok(format!("{} = {};\n", var, txt))
 }
 
 /// CALL _ WITH _ ...
@@ -275,17 +286,6 @@ fn emit_call_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         mangle_sub(ident.as_str()),
         params.join(", ")
     ))
-}
-
-/// DISPLAY _ ...
-fn emit_display_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
-    let mut parts = vec!["cout".to_string()];
-    let expr_list = pair.into_inner().next().unwrap();
-    for node in expr_list.into_inner() {
-        parts.push(emit_expr(node)?);
-    }
-    parts.push("flush".into());
-    Ok(format!("{};\n", parts.join(" << ")))
 }
 
 /// IF and WHILE test statement
@@ -333,12 +333,17 @@ fn emit_test_expr(pair: Pair<Rule>) -> LDPLResult<String> {
 /// Variable, Number, or Text
 fn emit_expr(pair: Pair<Rule>) -> LDPLResult<String> {
     Ok(match pair.as_rule() {
-        Rule::var => mangle_var(pair.as_str()),
+        Rule::var => emit_var(pair)?,
         Rule::number => pair.as_str().to_string(),
         Rule::text => pair.as_str().to_string(),
         Rule::linefeed => "\"\\n\"".to_string(),
         _ => panic!("UNIMPLEMENTED: {:?}", pair),
     })
+}
+
+/// Turn an ident/lookup pair into a C++ friendly ident.
+fn emit_var(pair: Pair<Rule>) -> LDPLResult<String> {
+    Ok(mangle_var(pair.as_str()))
 }
 
 /// WHILE _ DO / REPEAT
@@ -396,12 +401,13 @@ fn emit_modulo_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
     let base = emit_expr(iter.next().unwrap())?;
     let by = emit_expr(iter.next().unwrap())?;
-    let var = mangle_var(iter.next().unwrap().as_str());
+    let var = emit_var(iter.next().unwrap())?;
 
     Ok(format!("{} = modulo({}, {});", var, base, by))
 }
 
 /// FLOOR _
+/// FLOOR _ IN _
 fn emit_floor_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let stmt = pair.into_inner().next().unwrap();
     let rule = stmt.as_rule();
@@ -409,7 +415,7 @@ fn emit_floor_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let left = emit_expr(iter.next().unwrap())?;
     let mut right = left.clone();
     match rule {
-        Rule::floor_in_stmt => right = mangle_var(iter.next().unwrap().as_str()),
+        Rule::floor_in_stmt => right = emit_var(iter.next().unwrap())?,
         Rule::floor_mut_stmt => {}
         _ => unexpected!(rule),
     }
@@ -424,7 +430,7 @@ fn emit_solve_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 
     Ok(format!(
         "{} = {};\n",
-        mangle_var(ident.as_str()),
+        emit_var(ident)?,
         emit_solve_expr(iter.next().unwrap())?
     ))
 }
@@ -445,4 +451,142 @@ fn emit_solve_expr(pair: Pair<Rule>) -> LDPLResult<String> {
     }
 
     Ok(parts.join(" "))
+}
+
+////
+// TEXT
+
+/// IN _ JOIN _ _...
+fn emit_join_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let var = emit_var(iter.next().unwrap())?;
+
+    let mut out = vec![r#"joinvar = "";"#.to_string()];
+    for expr in iter {
+        out.push(format!("join(joinvar, {}, joinvar);", emit_expr(expr)?));
+    }
+    out.push(format!("{} = joinvar;", var));
+
+    Ok(out.join("\n"))
+}
+
+/// JOIN _ AND _ IN _
+fn emit_old_join_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let left = emit_expr(iter.next().unwrap())?;
+    let right = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+
+    Ok(format!("join({}, {}, {});\n", left, right, var))
+}
+
+/// TRIM _ IN _
+fn emit_trim_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let expr = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("{} = trimCopy({});", var, expr))
+}
+
+/// GET CHARACTER CODE OF _ IN _
+fn emit_get_char_code_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let expr = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("{} = get_char_name({});\n", var, expr))
+}
+
+/// GET ASCII CHARACTER _ IN _
+fn emit_get_ascii_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let chr = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("{} = (char)({});\n", var, chr))
+}
+
+/// GET CHARACTER AT _ FROM _ IN _
+fn emit_get_char_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let at = emit_expr(iter.next().unwrap())?;
+    let from = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("{} = charat({}, {});", var, from, at))
+}
+
+////
+// LIST + TEXT
+
+// GET LENGTH OF _ IN _
+fn emit_get_length_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let it = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+
+    Ok(format!("{} = ((chText){}).size();", var, it))
+
+    /*
+    if self.is_text(it) {
+        Ok(format!("{} = ((chText){}).size();", var, it))
+    } else if self.is_list(it) {
+        Ok(format!("{} = {}.inner_collection.size();", var, it))
+    } else {
+        unimplemented!()
+    }
+    */
+}
+
+////
+// IO
+
+/// DISPLAY _...
+fn emit_display_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut parts = vec!["cout".to_string()];
+    for node in pair.into_inner() {
+        parts.push(emit_expr(node)?);
+    }
+    parts.push("flush".into());
+    Ok(format!("{};\n", parts.join(" << ")))
+}
+
+/// ACCEPT _
+/// ACCEPT _ UNTIL EOF
+fn emit_accept_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let stmt = pair.into_inner().next().unwrap();
+
+    let eof = stmt.as_rule() == Rule::accept_eof_stmt;
+    let ident = stmt.into_inner().next().unwrap();
+
+    let fun = if eof {
+        "input_until_eof()"
+    } else {
+        // TODO check for text vs number
+        "input_number()"
+    };
+
+    Ok(format!("{} = {};\n", emit_var(ident)?, fun))
+}
+
+/// EXECUTE _
+/// EXECUTE _ AND STORE EXIT CODE IN _
+/// EXECUTE _ AND STORE OUTPUT IN _
+fn emit_execute_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let pair = pair.into_inner().next().unwrap();
+    let rule = pair.as_rule();
+    let mut iter = pair.into_inner();
+    Ok(match rule {
+        Rule::execute_expr_stmt => format!("system({});", emit_expr(iter.next().unwrap())?),
+        Rule::execute_output_stmt => {
+            let var = emit_var(iter.next().unwrap())?;
+            format!("{} = exec({});", var, emit_expr(iter.next().unwrap())?)
+        }
+        Rule::execute_exit_code_stmt => {
+            let var = emit_var(iter.next().unwrap())?;
+            format!(
+                "{} = (system({}) >> 8) & 0xff;", //shift wait() val and get lowest 2
+                var,
+                emit_expr(iter.next().unwrap())?
+            )
+        }
+        _ => unexpected!(rule),
+    })
 }
