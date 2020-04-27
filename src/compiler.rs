@@ -1,7 +1,12 @@
 //! The Compiler wraps your C++ compiler and builds it.
 
 use crate::LDPLResult;
-use std::{fs, path::Path, process::Command};
+use std::{
+    fs,
+    path::Path,
+    process::Command,
+    str,
+};
 
 /// Runs the local C++ compiler and builds a binary.
 pub fn compile(cpp_code: &str, outfile: Option<&str>) -> LDPLResult<()> {
@@ -23,7 +28,14 @@ pub fn compile(cpp_code: &str, outfile: Option<&str>) -> LDPLResult<()> {
 
     fs::remove_file(filename)?;
 
-    println!("status: {:?}", cmd?.stdout);
+    let output = cmd?;
+    if !output.stderr.is_empty() {
+        return error!(
+            "C++ Error compiling {}: \n{}",
+            filename,
+            str::from_utf8(&output.stderr).unwrap_or("UTF-8 Error in C++ output")
+        );
+    }
 
     Ok(())
 }

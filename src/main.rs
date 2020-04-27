@@ -15,7 +15,7 @@ const DEFAULT_COMMAND: &str = "build";
 /// Print error message to the console.
 macro_rules! error {
         ($msg:expr) => {{
-            eprintln!("\x1b[91;1mLDPL Error: {}\x1b[0m", $msg.to_string().replace("Error: ", ""));
+            eprintln!("\x1b[91;1mLDPL Error: \x1b[0m{}", $msg.to_string().replace("Error: ", "").trim());
             std::process::exit(1);
         }};
         ($fmt:expr, $($args:expr),*) => {
