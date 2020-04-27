@@ -165,28 +165,27 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::if_stmt => emit_if_stmt(pair)?,
         Rule::else_stmt => return error!("unexpected ELSE statement"),
         Rule::while_stmt => emit_while_stmt(pair)?,
-        Rule::for_each_stmt => todo!(), //emit_for_each_stmt(pair)?,
-        Rule::for_stmt => todo!(),      //emit_for_stmt(pair)?,
-        Rule::loop_kw_stmt => todo!(),  //emit_loop_kw(pair)?,
-        Rule::return_stmt => todo!(),   //emit_return_stmt(pair)?,
-        Rule::goto_stmt => todo!(),     //emit_goto_stmt(pair)?,
-        Rule::label_stmt => todo!(),    //emit_label_stmt(pair)?,
-        Rule::exit_stmt => todo!(),     //emit_exit_stmt(pair)?,
-        Rule::wait_stmt => todo!(),     //emit_wait_stmt(pair)?,
+        // Rule::for_each_stmt => todo!(), //emit_for_each_stmt(pair)?,
+        // Rule::for_stmt => todo!(),      //emit_for_stmt(pair)?,
+        // Rule::loop_kw_stmt => todo!(),  //emit_loop_kw(pair)?,
+        // Rule::return_stmt => todo!(),   //emit_return_stmt(pair)?,
+        // Rule::goto_stmt => todo!(),     //emit_goto_stmt(pair)?,
+        // Rule::label_stmt => todo!(),    //emit_label_stmt(pair)?,
+        // Rule::exit_stmt => todo!(),     //emit_exit_stmt(pair)?,
+        // Rule::wait_stmt => todo!(),     //emit_wait_stmt(pair)?,
         Rule::store_quote_stmt => emit_quote_stmt(pair)?,
         Rule::store_stmt => emit_store_stmt(pair)?,
 
         // math
         Rule::solve_stmt => emit_solve_stmt(pair)?,
         Rule::floor_stmt => emit_floor_stmt(pair)?,
-        Rule::ceil_stmt => todo!(),
         Rule::modulo_stmt => emit_modulo_stmt(pair)?,
-        Rule::get_rand_stmt => todo!(),
-        Rule::raise_stmt => todo!(),
-        Rule::log_stmt => todo!(),
-        Rule::sin_stmt => todo!(),
-        Rule::cos_stmt => todo!(),
-        Rule::tan_stmt => todo!(),
+        // Rule::get_rand_stmt => todo!(),
+        // Rule::raise_stmt => todo!(),
+        // Rule::log_stmt => todo!(),
+        // Rule::sin_stmt => todo!(),
+        // Rule::cos_stmt => todo!(),
+        // Rule::tan_stmt => todo!(),
 
         // text
         Rule::join_stmt => emit_join_stmt(pair)?,
@@ -202,25 +201,25 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::trim_stmt => emit_trim_stmt(pair)?,
 
         // list
-        Rule::push_stmt => todo!(),   // emit_push_stmt(pair)?,
-        Rule::delete_stmt => todo!(), // emit_delete_stmt(pair)?,
+        // Rule::push_stmt => todo!(),   // emit_push_stmt(pair)?,
+        // Rule::delete_stmt => todo!(), // emit_delete_stmt(pair)?,
 
         // map
-        Rule::get_keys_count_stmt => todo!(), // emit_get_keys_count_stmt(pair)?,
-        Rule::get_keys_stmt => todo!(),       // emit_get_keys_stmt(pair)?,
+        // Rule::get_keys_count_stmt => todo!(), // emit_get_keys_count_stmt(pair)?,
+        // Rule::get_keys_stmt => todo!(),       // emit_get_keys_stmt(pair)?,
 
         // list + map
-        Rule::clear_stmt => todo!(), // emit_clear_stmt(pair)?,
-        Rule::copy_stmt => todo!(),  // emit_copy_stmt(pair)?,
+        // Rule::clear_stmt => todo!(), // emit_clear_stmt(pair)?,
+        // Rule::copy_stmt => todo!(),  // emit_copy_stmt(pair)?,
 
         // list + text
         Rule::get_length_stmt => emit_get_length_stmt(pair)?,
 
         // io
         Rule::display_stmt => emit_display_stmt(pair)?,
-        Rule::load_stmt => todo!(),   // emit_load_stmt(pair)?,
-        Rule::write_stmt => todo!(),  // emit_write_stmt(pair)?,
-        Rule::append_stmt => todo!(), // emit_append_stmt(pair)?,
+        Rule::load_stmt => emit_load_stmt(pair)?,
+        Rule::write_stmt => emit_write_stmt(pair)?,
+        Rule::append_stmt => emit_append_stmt(pair)?,
         Rule::accept_stmt => emit_accept_stmt(pair)?,
         Rule::execute_stmt => emit_execute_stmt(pair)?,
 
@@ -408,6 +407,7 @@ fn emit_modulo_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 
 /// FLOOR _
 /// FLOOR _ IN _
+/// TODO: only FLOOR _ in 4.4
 fn emit_floor_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let stmt = pair.into_inner().next().unwrap();
     let rule = stmt.as_rule();
@@ -549,7 +549,7 @@ fn emit_get_char_code_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
     let expr = emit_expr(iter.next().unwrap())?;
     let var = emit_var(iter.next().unwrap())?;
-    Ok(format!("{} = get_char_name({});\n", var, expr))
+    Ok(format!("{} = get_char_num({});\n", var, expr))
 }
 
 /// GET ASCII CHARACTER _ IN _
@@ -620,6 +620,44 @@ fn emit_accept_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     };
 
     Ok(format!("{} = {};\n", emit_var(ident)?, fun))
+}
+
+/// LOAD FILE _ IN _
+fn emit_load_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let path = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("load_file({}, {});\n", path, var))
+}
+
+/// WRITE _ TO FILE _
+fn emit_write_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let expr = emit_expr(iter.next().unwrap())?;
+    let path = emit_expr(iter.next().unwrap())?;
+    Ok(format!(
+        r#"
+file_writing_stream.open(expandHomeDirectory(((chText){}).str_rep()), ios_base::out);
+file_writing_stream << {};
+file_writing_stream.close();
+"#,
+        path, expr
+    ))
+}
+
+/// APPEND _ TO FILE _
+fn emit_append_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let expr = emit_expr(iter.next().unwrap())?;
+    let path = emit_expr(iter.next().unwrap())?;
+    Ok(format!(
+        r#"
+file_writing_stream.open(expandHomeDirectory(((chText){}).str_rep()), ios_base::app);
+file_writing_stream << {};
+file_writing_stream.close();
+"#,
+        path, expr
+    ))
 }
 
 /// EXECUTE _
