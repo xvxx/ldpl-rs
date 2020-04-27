@@ -191,14 +191,14 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         // text
         Rule::join_stmt => emit_join_stmt(pair)?,
         Rule::old_join_stmt => emit_old_join_stmt(pair)?,
-        Rule::replace_stmt => todo!(), // emit_replacea_stmt(pair)?,
-        Rule::split_stmt => todo!(),   // emit_split_stmt(pair)?,
+        Rule::replace_stmt => emit_replace_stmt(pair)?,
+        Rule::split_stmt => emit_split_stmt(pair)?,
         Rule::get_char_stmt => emit_get_char_stmt(pair)?,
         Rule::get_ascii_stmt => emit_get_ascii_stmt(pair)?,
         Rule::get_char_code_stmt => emit_get_char_code_stmt(pair)?,
-        Rule::get_index_stmt => todo!(), // emit_get_index_stmt(pair)?,
-        Rule::count_stmt => todo!(),     // emit_count_stmt(pair)?,
-        Rule::substr_stmt => todo!(),    // emit_substr_stmt(pair)?,
+        Rule::get_index_stmt => emit_get_index_stmt(pair)?,
+        Rule::count_stmt => emit_count_stmt(pair)?,
+        Rule::substr_stmt => emit_substring_stmt(pair)?,
         Rule::trim_stmt => emit_trim_stmt(pair)?,
 
         // list
@@ -456,6 +456,31 @@ fn emit_solve_expr(pair: Pair<Rule>) -> LDPLResult<String> {
 ////
 // TEXT
 
+/// SPLIT _ BY _ IN _
+fn emit_split_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let text = emit_expr(iter.next().unwrap())?;
+    let splitter = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!(
+        "{} = utf8_split_list({}, {});\n",
+        var, text, splitter
+    ))
+}
+
+/// REPLACE _ FROM _ WITH _ IN _
+/// replace_stmt = { ^"REPLACE" ~ expr ~ ^"FROM" ~ expr ~ ^"WITH" ~ expr ~ ^"IN" ~ var }
+fn emit_replace_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let search = emit_expr(iter.next().unwrap())?;
+    let text = emit_expr(iter.next().unwrap())?;
+    let replacement = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+
+    Ok(format!("{} = str_replace(((chText){}).str_rep(), ((chText){}).str_rep() ((chText){}).str_rep());\n",
+    var, text, search, replacement))
+}
+
 /// IN _ JOIN _ _...
 fn emit_join_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
@@ -486,6 +511,37 @@ fn emit_trim_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let expr = emit_expr(iter.next().unwrap())?;
     let var = emit_var(iter.next().unwrap())?;
     Ok(format!("{} = trimCopy({});", var, expr))
+}
+
+/// COUNT _ FROM _ IN _
+fn emit_count_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let search = emit_expr(iter.next().unwrap())?;
+    let text = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("{} = utf8Count({}, {});\n", var, text, search))
+}
+
+/// SUBSTRING _ FROM _ LENGTH _ IN _
+fn emit_substring_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let text = emit_expr(iter.next().unwrap())?;
+    let search = emit_expr(iter.next().unwrap())?;
+    let length = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!(
+        "joinvar = {};\n{} = joinvar.substr({}, {});",
+        text, var, search, length
+    ))
+}
+
+/// GET INDEX OF _ FROM _ IN _
+fn emit_get_index_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let search = emit_expr(iter.next().unwrap())?;
+    let text = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("{} = utf8GetIndexOf({}, {});\n", var, text, search))
 }
 
 /// GET CHARACTER CODE OF _ IN _
