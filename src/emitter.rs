@@ -169,8 +169,8 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::for_stmt => emit_for_stmt(pair)?,
         Rule::loop_kw_stmt => emit_loop_kw_stmt(pair)?,
         Rule::return_stmt => emit_return_stmt(pair)?,
-        // Rule::goto_stmt => todo!(),     //emit_goto_stmt(pair)?,
-        // Rule::label_stmt => todo!(),    //emit_label_stmt(pair)?,
+        Rule::goto_stmt => emit_goto_stmt(pair)?,
+        Rule::label_stmt => emit_label_stmt(pair)?,
         // Rule::exit_stmt => todo!(),     //emit_exit_stmt(pair)?,
         // Rule::wait_stmt => todo!(),     //emit_wait_stmt(pair)?,
         Rule::store_quote_stmt => emit_quote_stmt(pair)?,
@@ -256,6 +256,18 @@ fn emit_return_stmt(_pair: Pair<Rule>) -> LDPLResult<String> {
 /// BREAK / CONTINUE
 fn emit_loop_kw_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     Ok(format!("{};\n", pair.as_str()))
+}
+
+/// GOTO _
+fn emit_goto_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let label = pair.into_inner().next().unwrap();
+    Ok(format!("goto label_{};\n", mangle(label.as_str())))
+}
+
+/// LABEL _
+fn emit_label_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let label = pair.into_inner().next().unwrap();
+    Ok(format!("label_{}:\n", mangle(label.as_str())))
 }
 
 /// CALL _ WITH _ ...
