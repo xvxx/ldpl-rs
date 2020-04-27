@@ -101,6 +101,7 @@ fn run() -> LDPLResult<()> {
             "parse" => command = "parse",
             "check" => command = "check",
             "build" => command = "build",
+            "run" => command = "run",
             _ => path = arg,
         }
     }
@@ -159,8 +160,22 @@ fn run() -> LDPLResult<()> {
     info!("Building {}", bin);
     compiler::compile(&cpp, Some(&bin))?;
     info!("Saved as {}", bin);
-
     success!("File(s) compiled successfully.");
+
+    if command == "run" {
+        info!("Running {}", bin);
+        let bin = if bin.starts_with('/') || bin.starts_with('.') {
+            bin
+        } else {
+            format!("./{}", bin)
+        };
+        let mut cmd = Command::new(bin)
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .spawn()?;
+        cmd.wait()?;
+    }
+
     Ok(())
 }
 
@@ -217,6 +232,7 @@ fn print_usage() {
     check       Check for errors only.
     emit        Print C++ code. (same as -r)
     build       Compile binary. (default)
+    run         Run binary after building.
 "#
     );
     print!("\x1b[95;1mOptions:\x1b[0m");
