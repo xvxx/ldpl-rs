@@ -53,10 +53,10 @@ fn type_for(ldpl_type: &str) -> &str {
     match ldpl_type.to_lowercase().as_ref() {
         "number" => "ldpl_number",
         "number list" => "ldpl_list<ldpl_number>",
-        "number map" => "ldpl_map<chText>",
+        "number map" | "number vector" => "ldpl_map<chText>",
         "text" => "chText",
         "text list" => "ldpl_list<chText>",
-        "text map" => "ldpl_map<chText>",
+        "text map" | "text vector" => "ldpl_map<chText>",
         _ => "UNKNOWN_TYPE",
     }
 }
@@ -100,7 +100,7 @@ fn emit_data(pair: Pair<Rule>) -> LDPLResult<String> {
         let mut parts = def.into_inner();
         let ident = parts.next().unwrap();
         let typename = parts.next().unwrap().as_str();
-        let mut var = format!("{} {}", type_for(typename), emit_var(ident)?);
+        let mut var = format!("{} {}", type_for(typename), mangle_var(ident.as_str()));
 
         if typename == "number" {
             var.push_str(" = 0");
@@ -333,6 +333,7 @@ fn emit_test_expr(pair: Pair<Rule>) -> LDPLResult<String> {
 fn emit_expr(pair: Pair<Rule>) -> LDPLResult<String> {
     Ok(match pair.as_rule() {
         Rule::var => emit_var(pair)?,
+        Rule::ident => mangle_var(pair.as_str()),
         Rule::number => pair.as_str().to_string(),
         Rule::text => pair.as_str().to_string(),
         Rule::linefeed => "\"\\n\"".to_string(),
@@ -342,7 +343,19 @@ fn emit_expr(pair: Pair<Rule>) -> LDPLResult<String> {
 
 /// Turn an ident/lookup pair into a C++ friendly ident.
 fn emit_var(pair: Pair<Rule>) -> LDPLResult<String> {
-    Ok(mangle_var(pair.as_str()))
+    let inner = pair.into_inner().next().unwrap();
+    match inner.as_rule() {
+        Rule::ident => Ok(mangle_var(inner.as_str())),
+        Rule::lookup => {
+            let mut iter = inner.into_inner();
+            let mut parts = vec![emit_expr(iter.next().unwrap())?];
+            for part in iter {
+                parts.push(format!("[{}]", emit_expr(part)?));
+            }
+            Ok(parts.join(""))
+        }
+        _ => unexpected!(inner),
+    }
 }
 
 /// WHILE _ DO / REPEAT
