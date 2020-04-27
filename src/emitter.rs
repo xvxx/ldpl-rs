@@ -201,16 +201,16 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::trim_stmt => emit_trim_stmt(pair)?,
 
         // list
-        // Rule::push_stmt => todo!(),   // emit_push_stmt(pair)?,
-        // Rule::delete_stmt => todo!(), // emit_delete_stmt(pair)?,
+        Rule::push_stmt => emit_push_stmt(pair)?,
+        Rule::delete_stmt => emit_delete_stmt(pair)?,
 
         // map
         // Rule::get_keys_count_stmt => todo!(), // emit_get_keys_count_stmt(pair)?,
         // Rule::get_keys_stmt => todo!(),       // emit_get_keys_stmt(pair)?,
 
         // list + map
-        // Rule::clear_stmt => todo!(), // emit_clear_stmt(pair)?,
-        // Rule::copy_stmt => todo!(),  // emit_copy_stmt(pair)?,
+        Rule::clear_stmt => emit_clear_stmt(pair)?,
+        Rule::copy_stmt => emit_copy_stmt(pair)?,
 
         // list + text
         Rule::get_length_stmt => emit_get_length_stmt(pair)?,
@@ -650,6 +650,45 @@ fn emit_get_length_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         unimplemented!()
     }
     */
+}
+
+////
+// LIST
+
+/// PUSH _ TO _
+fn emit_push_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let expr = emit_expr(iter.next().unwrap())?;
+    let list = emit_var(iter.next().unwrap())?;
+    Ok(format!("{}.inner_collection.push_back({});\n", list, expr))
+}
+
+/// DELETE LAST ELEMENT OF _
+fn emit_delete_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let list = emit_var(iter.next().unwrap())?;
+    Ok(format!(
+        "if({list}.inner_collection.size() > 0) {list}.inner_collection.pop_back();\n",
+        list = list
+    ))
+}
+
+/// COPY _ TO _
+fn emit_copy_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let from = emit_expr(iter.next().unwrap())?;
+    let to = emit_var(iter.next().unwrap())?;
+    Ok(format!(
+        "{}.inner_collection = {}.inner_collection;\n",
+        to, from
+    ))
+}
+
+/// CLEAR _
+fn emit_clear_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let collection = emit_var(iter.next().unwrap())?;
+    Ok(format!("{}.inner_collection.clear();\n", collection))
 }
 
 ////
