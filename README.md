@@ -53,12 +53,27 @@ done, we'll move onto these four, higher level goals:
 
 | **Status** | **Goal**      | **Comments** |
 | ---------- | ------------- | ------------ |
-| 👷         | `examples/`   | Active       |
-| 🚧         | `ldpltests`   | Planned      |
-| 🚧         | `--flags`     | Planned      |
+| 👷         | `examples/`   | In Progress  |
+| 👷         | `ldpltests`   | In Progress  |
+| 👷         | `--flags`     | Mostly done  |
 | 🚧         | `GILD`        | Planned      |
 | 🚧         | `Lute`        | Planned      |
 | 🚧         | `ldpl-socket` | Planned      |
+
+| **Test** | **Status** |
+| -------- | ---------- |
+| basicar  | ✅         |
+| basictx  | ❌         |
+| conflow  | ❌         |
+| exec     | ❌         |
+| explode  | ❌         |
+| fibo     | ✅         |
+| file     | ✅         |
+| list     | ❌         |
+| of       | ❌         |
+| quine    | ❌         |
+| sqrt     | ❌         |
+| vector   | ❌         |
 
 ## Statements
 
