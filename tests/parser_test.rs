@@ -66,10 +66,7 @@ fn test_text() {
 fn test_newline() {
     let node = parse_one!("display hello crlf goodbye");
     assert_eq!(Rule::display_stmt, node.as_rule());
-
     let mut iter = node.into_inner();
-    let list = iter.next().unwrap();
-    let mut iter = list.into_inner();
 
     let var = iter.next().unwrap();
     assert_eq!("hello", var.as_str());
@@ -167,9 +164,6 @@ fn test_user_stmt() {
     let node = parse_one!("socket connect to gopher.host at gopher.port in gopher.socket");
     assert_eq!(Rule::user_stmt, node.as_rule());
 
-    let mut iter = node.into_inner();
-    let node = iter.next().unwrap();
-    assert_eq!(Rule::expr_list, node.as_rule());
     assert_eq!(
         "socket connect to gopher.host at gopher.port in gopher.socket",
         node.as_str()
