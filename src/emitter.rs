@@ -165,7 +165,7 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::if_stmt => emit_if_stmt(pair)?,
         Rule::else_stmt => return error!("unexpected ELSE statement"),
         Rule::while_stmt => emit_while_stmt(pair)?,
-        // Rule::for_each_stmt => todo!(), //emit_for_each_stmt(pair)?,
+        Rule::for_each_stmt => emit_for_each_stmt(pair)?,
         // Rule::for_stmt => todo!(),      //emit_for_stmt(pair)?,
         Rule::loop_kw_stmt => emit_loop_kw_stmt(pair)?,
         Rule::return_stmt => emit_return_stmt(pair)?,
@@ -358,6 +358,12 @@ fn emit_expr(pair: Pair<Rule>) -> LDPLResult<String> {
 
 /// Turn an ident/lookup pair into a C++ friendly ident.
 fn emit_var(pair: Pair<Rule>) -> LDPLResult<String> {
+    assert!(
+        pair.as_rule() == Rule::var,
+        "Expected Rule::var, got {:?}",
+        pair.as_rule()
+    );
+
     let inner = pair.into_inner().next().unwrap();
     match inner.as_rule() {
         Rule::ident => Ok(mangle_var(inner.as_str())),
@@ -400,7 +406,7 @@ fn emit_if_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         }
     }
 
-    Ok(format!("if {} {{\n{}\n}}\n", test, body.join("\n")))
+    Ok(format!("if {} {{\n{}\n}}\n", test, body.join("")))
 }
 
 /// ELSE IF _ THEN
@@ -418,6 +424,33 @@ fn emit_else_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     } else {
         Ok(format!("}} else {{\n"))
     }
+}
+
+/// FOR EACH _ IN _ / REPEAT
+fn emit_for_each_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let ident = mangle_var(iter.next().unwrap().as_str());
+    let collection = emit_expr(iter.next().unwrap())?;
+    let range_var = "RVAR_0"; // TODO: not really...
+
+    let mut body = vec![];
+    for node in iter {
+        body.push(emit_subproc_stmt(node)?);
+    }
+
+    Ok(format!(
+        r#"
+
+for (auto& {range_var} : {collection}.inner_collection) {{
+    {real_var} = {range_var};
+    {body}
+}}
+"#,
+        range_var = range_var,
+        collection = collection,
+        real_var = ident,
+        body = body.join(""),
+    ))
 }
 
 ////

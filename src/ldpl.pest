@@ -207,7 +207,7 @@ while_stmt = {
 }
 
 for_each_stmt = {
-    ^"FOR EACH" ~ ident ~ ^"IN" ~ expr ~ ^"DO" ~ "\n"
+    ^"FOR" ~ ^"EACH" ~ ident ~ ^"IN" ~ expr ~ ^"DO" ~ "\n"
     ~ (subproc_stmt ~ "\n"+)*
     ~ "\n"*
     ~ ^"REPEAT"

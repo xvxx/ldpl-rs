@@ -48,7 +48,7 @@ done, we'll move onto these four, higher level goals:
 
 1. Support the same `--flags` as the official compiler.
 2. Compile all LDPL 4.4 `examples/`.
-3. Pass all LDPL 4.4 [tests].
+3. Pass all LDPL 4.4 [tests][ldpltest].
 4. Compile popular LDPL 4.4 [projects].
 
 | **Status** | **Goal**      | **Comments** |
@@ -59,6 +59,8 @@ done, we'll move onto these four, higher level goals:
 | 🚧         | `GILD`        | Planned      |
 | 🚧         | `Lute`        | Planned      |
 | 🚧         | `ldpl-socket` | Planned      |
+
+### [LDPLTest][ldpltest] Pass/Fail Status
 
 | **Test** | **Status** |
 | -------- | ---------- |
@@ -74,6 +76,29 @@ done, we'll move onto these four, higher level goals:
 | quine    | ❌         |
 | sqrt     | ✅         |
 | vector   | ❌         |
+
+### [LDPL Examples][examples] Pass/Fail Status
+
+| **Example**         | **Status** |
+| ------------------- | ---------- |
+| 99bottles.ldpl      | ❌         |
+| absolutevalue.ldpl  | ❌         |
+| arguments.ldpl      | ❌         |
+| bellman-ford.ldpl   | ❌         |
+| brainfuck.ldpl      | ❌         |
+| disancount.ldpl     | ❌         |
+| euler.ldpl          | ❌         |
+| explode.ldpl        | ❌         |
+| factorial.ldpl      | ❌         |
+| fibonacci.ldpl      | ❌         |
+| floyd-warshall.ldpl | ❌         |
+| helloworld.ldpl     | ❌         |
+| leapyear.ldpl       | ❌         |
+| loop_counter.ldpl   | ❌         |
+| oddornot.ldpl       | ❌         |
+| quine.ldpl          | ❌         |
+| sqrt.ldpl           | ❌         |
+| strcmp-demo.ldpl    | ❌         |
 
 ## Statements
 
@@ -202,8 +227,9 @@ Tracking what we have left to do, based on the docs:
 [rustup]: http://rustup.rs/
 [git]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 [cpp-compiler]: https://gcc.gnu.org/install/
-[tests]: https://github.com/Lartu/ldpltest
+[ldpltest]: https://github.com/Lartu/ldpltest
 [projects]: https://www.ldpl-lang.org/projects.html
 [gild]: https://github.com/xvxx/gild
 [lute]: https://github.com/lartu/lute
 [ldpl-socket]: https://github.com/xvxx/ldpl-socket
+[examples]: https://github.com/Lartu/ldpl/tree/4.4/examples
