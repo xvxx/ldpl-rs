@@ -167,8 +167,8 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::while_stmt => emit_while_stmt(pair)?,
         // Rule::for_each_stmt => todo!(), //emit_for_each_stmt(pair)?,
         // Rule::for_stmt => todo!(),      //emit_for_stmt(pair)?,
-        // Rule::loop_kw_stmt => todo!(),  //emit_loop_kw(pair)?,
-        // Rule::return_stmt => todo!(),   //emit_return_stmt(pair)?,
+        Rule::loop_kw_stmt => emit_loop_kw_stmt(pair)?,
+        Rule::return_stmt => emit_return_stmt(pair)?,
         // Rule::goto_stmt => todo!(),     //emit_goto_stmt(pair)?,
         // Rule::label_stmt => todo!(),    //emit_label_stmt(pair)?,
         // Rule::exit_stmt => todo!(),     //emit_exit_stmt(pair)?,
@@ -252,6 +252,16 @@ fn emit_quote_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     } else {
         Ok(format!("{} = \"\";\n", var))
     }
+}
+
+/// RETURN
+fn emit_return_stmt(_pair: Pair<Rule>) -> LDPLResult<String> {
+    Ok("return;\n".to_string())
+}
+
+/// BREAK / CONTINUE
+fn emit_loop_kw_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    Ok(format!("{};\n", pair.as_str()))
 }
 
 /// CALL _ WITH _ ...
@@ -688,15 +698,16 @@ fn emit_execute_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     Ok(match rule {
         Rule::execute_expr_stmt => format!("system({});", emit_expr(iter.next().unwrap())?),
         Rule::execute_output_stmt => {
+            let expr = emit_expr(iter.next().unwrap())?;
             let var = emit_var(iter.next().unwrap())?;
-            format!("{} = exec({});", var, emit_expr(iter.next().unwrap())?)
+            format!("{} = exec({});", var, expr)
         }
         Rule::execute_exit_code_stmt => {
+            let expr = emit_expr(iter.next().unwrap())?;
             let var = emit_var(iter.next().unwrap())?;
             format!(
                 "{} = (system({}) >> 8) & 0xff;", //shift wait() val and get lowest 2
-                var,
-                emit_expr(iter.next().unwrap())?
+                var, expr
             )
         }
         _ => unexpected!(rule),

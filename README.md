@@ -65,14 +65,14 @@ done, we'll move onto these four, higher level goals:
 | basicar  | ✅         |
 | basictx  | ❌         |
 | conflow  | ❌         |
-| exec     | ❌         |
+| exec     | ✅         |
 | explode  | ✅         |
 | fibo     | ✅         |
 | file     | ✅         |
 | list     | ❌         |
 | of       | ❌         |
 | quine    | ❌         |
-| sqrt     | ❌         |
+| sqrt     | ✅         |
 | vector   | ❌         |
 
 ## Statements
