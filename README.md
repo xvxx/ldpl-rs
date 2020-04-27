@@ -62,43 +62,43 @@ done, we'll move onto these four, higher level goals:
 
 ### [LDPLTest][ldpltest] Pass/Fail Status
 
-| **Test** | **Status** |
-| -------- | ---------- |
-| basicar  | ✅         |
-| basictx  | ❌         |
-| conflow  | ❌         |
-| exec     | ✅         |
-| explode  | ✅         |
-| fibo     | ✅         |
-| file     | ✅         |
-| list     | ❌         |
-| of       | ❌         |
-| quine    | ❌         |
-| sqrt     | ✅         |
-| vector   | ❌         |
+| **Test** | **Status** | **Failure Reason**   |
+| -------- | ---------- | -------------------- |
+| basicar  | ✅         |                      |
+| basictx  | ❌         | Type coercion        |
+| conflow  | ❌         | CREATE STMT          |
+| exec     | ✅         |                      |
+| explode  | ✅         |                      |
+| fibo     | ✅         |                      |
+| file     | ✅         |                      |
+| list     | ❌         | Type coercion        |
+| of       | ❌         | OF syntax            |
+| quine    | ❌         | Type coercion        |
+| sqrt     | ✅         |                      |
+| vector   | ❌         | Type coercion (keys) |
 
 ### [LDPL Examples][examples] Pass/Fail Status
 
-| **Example**         | **Status** | **Reason for failure** |
-| ------------------- | ---------- | ---------------------- |
-| 99bottles.ldpl      | ✅         |                        |
-| absolutevalue.ldpl  | ✅         |                        |
-| arguments.ldpl      | ✅         |                        |
-| bellman-ford.ldpl   | ❌         | Infinity symbol        |
-| brainfuck.ldpl      | ❌         | Type coercion          |
-| disancount.ldpl     | ✅         |                        |
-| euler.ldpl          | ✅         |                        |
-| explode.ldpl        | ❌         | ACCEPT for text        |
-| factorial.ldpl      | ✅         |                        |
-| fibonacci.ldpl      | ✅         |                        |
-| floyd-warshall.ldpl | ❌         | Infinity again         |
-| helloworld.ldpl     | ✅         |                        |
-| leapyear.ldpl       | ❌         | ELSE IF                |
-| loop_counter.ldpl   | ✅         |                        |
-| oddornot.ldpl       | ✅         | Type coercion          |
-| quine.ldpl          | ❌         |                        |
-| sqrt.ldpl           | ✅         |                        |
-| strcmp-demo.ldpl    | ✅         |                        |
+| **Example**         | **Status** | **Failure Reason** |
+| ------------------- | ---------- | ------------------ |
+| 99bottles.ldpl      | ✅         |                    |
+| absolutevalue.ldpl  | ✅         |                    |
+| arguments.ldpl      | ✅         |                    |
+| bellman-ford.ldpl   | ❌         | Infinity symbol    |
+| brainfuck.ldpl      | ❌         | Type coercion      |
+| disancount.ldpl     | ✅         |                    |
+| euler.ldpl          | ✅         |                    |
+| explode.ldpl        | ❌         | ACCEPT for text    |
+| factorial.ldpl      | ✅         |                    |
+| fibonacci.ldpl      | ✅         |                    |
+| floyd-warshall.ldpl | ❌         | Infinity again     |
+| helloworld.ldpl     | ✅         |                    |
+| leapyear.ldpl       | ❌         | ELSE IF            |
+| loop_counter.ldpl   | ✅         |                    |
+| oddornot.ldpl       | ✅         | Type coercion      |
+| quine.ldpl          | ❌         |                    |
+| sqrt.ldpl           | ✅         |                    |
+| strcmp-demo.ldpl    | ✅         |                    |
 
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
