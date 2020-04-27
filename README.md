@@ -79,26 +79,26 @@ done, we'll move onto these four, higher level goals:
 
 ### [LDPL Examples][examples] Pass/Fail Status
 
-| **Example**         | **Status** |
-| ------------------- | ---------- |
-| 99bottles.ldpl      | ❌         |
-| absolutevalue.ldpl  | ❌         |
-| arguments.ldpl      | ❌         |
-| bellman-ford.ldpl   | ❌         |
-| brainfuck.ldpl      | ❌         |
-| disancount.ldpl     | ❌         |
-| euler.ldpl          | ❌         |
-| explode.ldpl        | ❌         |
-| factorial.ldpl      | ❌         |
-| fibonacci.ldpl      | ❌         |
-| floyd-warshall.ldpl | ❌         |
-| helloworld.ldpl     | ❌         |
-| leapyear.ldpl       | ❌         |
-| loop_counter.ldpl   | ❌         |
-| oddornot.ldpl       | ❌         |
-| quine.ldpl          | ❌         |
-| sqrt.ldpl           | ❌         |
-| strcmp-demo.ldpl    | ❌         |
+| **Example**         | **Status** | **Reason for failure** |
+| ------------------- | ---------- | ---------------------- |
+| 99bottles.ldpl      | ✅         |                        |
+| absolutevalue.ldpl  | ✅         |                        |
+| arguments.ldpl      | ✅         |                        |
+| bellman-ford.ldpl   | ❌         | Infinity symbol        |
+| brainfuck.ldpl      | ❌         | Type coercion          |
+| disancount.ldpl     | ✅         |                        |
+| euler.ldpl          | ✅         |                        |
+| explode.ldpl        | ❌         | ACCEPT for text        |
+| factorial.ldpl      | ✅         |                        |
+| fibonacci.ldpl      | ✅         |                        |
+| floyd-warshall.ldpl | ❌         | Infinity again         |
+| helloworld.ldpl     | ✅         |                        |
+| leapyear.ldpl       | ❌         | ELSE IF                |
+| loop_counter.ldpl   | ✅         |                        |
+| oddornot.ldpl       | ✅         | Type coercion          |
+| quine.ldpl          | ❌         |                        |
+| sqrt.ldpl           | ✅         |                        |
+| strcmp-demo.ldpl    | ✅         |                        |
 
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
