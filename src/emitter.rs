@@ -166,7 +166,7 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::else_stmt => return error!("unexpected ELSE statement"),
         Rule::while_stmt => emit_while_stmt(pair)?,
         Rule::for_each_stmt => emit_for_each_stmt(pair)?,
-        // Rule::for_stmt => todo!(),      //emit_for_stmt(pair)?,
+        Rule::for_stmt => emit_for_stmt(pair)?,
         Rule::loop_kw_stmt => emit_loop_kw_stmt(pair)?,
         Rule::return_stmt => emit_return_stmt(pair)?,
         // Rule::goto_stmt => todo!(),     //emit_goto_stmt(pair)?,
@@ -420,7 +420,38 @@ fn emit_else_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     }
 }
 
-/// FOR EACH _ IN _ / REPEAT
+/// FOR _ IN _ TO _ STEP _ DO / REPEAT
+fn emit_for_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let var = mangle_var(iter.next().unwrap().as_str());
+    let from = emit_expr(iter.next().unwrap())?;
+    let to = emit_expr(iter.next().unwrap())?;
+    let step = emit_expr(iter.next().unwrap())?;
+
+    let mut body = vec![];
+    for node in iter {
+        body.push(emit_subproc_stmt(node)?);
+    }
+
+    let init = format!("{} = {}", var, from);
+    let test = format!(
+        "{step} >= 0 ? {var} < {to} : {var} > {to}",
+        step = step,
+        var = var,
+        to = to
+    );
+    let incr = format!("{} += {}", var, step);
+
+    Ok(format!(
+        "for({init}; {test}; {incr}) {{\n    {body}\n}}",
+        init = init,
+        test = test,
+        incr = incr,
+        body = body.join(""),
+    ))
+}
+
+/// FOR EACH _ IN _ DO / REPEAT
 fn emit_for_each_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
     let ident = mangle_var(iter.next().unwrap().as_str());
