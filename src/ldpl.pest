@@ -114,7 +114,7 @@ char = {
 linefeed = ${ ^"LF" | ^"CRLF" }
 
 // Lookup: person:"Name", list:5, etc
-lookup = ${ ident ~ (":" ~ ( text | number | ident))+ }
+lookup = ${ ident ~ (":" ~ (text | number | ident))+ }
 
 // Variable: name, something.with.dots, person:"Name", etc
 var = ${ lookup | ident }
@@ -335,11 +335,11 @@ substr_stmt = { ^"SUBSTRING" ~ expr ~ ^"FROM" ~ expr ~ ^"LENGTH" ~ expr ~ ^"IN" 
 trim_stmt = { ^"TRIM" ~ expr ~ ^"IN" ~ var }
 store_quote_stmt = {
     ^"STORE" ~ ^"QUOTE" ~ ^"IN" ~ var
-    ~ store_quote_inner*
+    ~ store_quote_inner
     ~ "\n" ~ ^"END QUOTE"
 }
 store_quote_inner = {
-    !("\n" ~ ^"END QUOTE") ~ ANY
+    (!("\n" ~ ^"END QUOTE") ~ ANY)*
 }
 
 ////

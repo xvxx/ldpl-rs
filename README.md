@@ -66,7 +66,7 @@ done, we'll move onto these four, higher level goals:
 | basictx  | ❌         |
 | conflow  | ❌         |
 | exec     | ❌         |
-| explode  | ❌         |
+| explode  | ✅         |
 | fibo     | ✅         |
 | file     | ✅         |
 | list     | ❌         |

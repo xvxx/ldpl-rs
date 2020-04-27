@@ -245,8 +245,13 @@ fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 fn emit_quote_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
     let var = emit_var(iter.next().unwrap())?;
-    let txt = iter.next().unwrap();
-    Ok(format!("{} = {};\n", var, txt))
+    let txt = iter.next().unwrap().as_str();
+    // remove extra preceeding \n from txt. parser limitation.
+    if !txt.is_empty() {
+        Ok(format!("{} = \"{}\";\n", var, &txt[1..]))
+    } else {
+        Ok(format!("{} = \"\";\n", var))
+    }
 }
 
 /// CALL _ WITH _ ...
