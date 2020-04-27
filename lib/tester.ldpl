@@ -90,7 +90,7 @@ while i is less than testCount do
     store tests:i in testName
     display "\033[33mTesting '" testName ".ldpl'\033[0m" crlf
     if testRunner is equal to "" then
-        in command join "cd tests && ../ldpl-rs " testName ".ldpl -o=" testName " > /dev/null"
+        in command join "cd tests && ../../ldpl-rs " testName ".ldpl -o=" testName " > /dev/null"
         call execute-command
         in command join "cd tests && ./" testName " > " testName ".test"
         call execute-command
