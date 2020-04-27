@@ -171,8 +171,8 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::return_stmt => emit_return_stmt(pair)?,
         Rule::goto_stmt => emit_goto_stmt(pair)?,
         Rule::label_stmt => emit_label_stmt(pair)?,
-        // Rule::exit_stmt => todo!(),     //emit_exit_stmt(pair)?,
-        // Rule::wait_stmt => todo!(),     //emit_wait_stmt(pair)?,
+        Rule::exit_stmt => emit_exit_stmt(pair)?,
+        Rule::wait_stmt => emit_wait_stmt(pair)?,
         Rule::store_quote_stmt => emit_quote_stmt(pair)?,
         Rule::store_stmt => emit_store_stmt(pair)?,
 
@@ -227,6 +227,9 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     Ok(out.join(""))
 }
 
+////
+// CONTROL FLOW
+
 /// STORE _ IN _
 fn emit_store_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let mut iter = pair.into_inner();
@@ -268,6 +271,20 @@ fn emit_goto_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
 fn emit_label_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
     let label = pair.into_inner().next().unwrap();
     Ok(format!("label_{}:\n", mangle(label.as_str())))
+}
+
+/// WAIT _ MILLISECONDS
+fn emit_wait_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let count = emit_expr(pair.into_inner().next().unwrap())?;
+    Ok(format!(
+        "std::this_thread::sleep_for(std::chrono::milliseconds((long int){}));\n",
+        count
+    ))
+}
+
+/// EXIT
+fn emit_exit_stmt(_pair: Pair<Rule>) -> LDPLResult<String> {
+    Ok("exit(0);\n".to_string())
 }
 
 /// CALL _ WITH _ ...
