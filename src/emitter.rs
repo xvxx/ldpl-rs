@@ -180,12 +180,6 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::solve_stmt => emit_solve_stmt(pair)?,
         Rule::floor_stmt => emit_floor_stmt(pair)?,
         Rule::modulo_stmt => emit_modulo_stmt(pair)?,
-        // Rule::get_rand_stmt => todo!(),
-        // Rule::raise_stmt => todo!(),
-        // Rule::log_stmt => todo!(),
-        // Rule::sin_stmt => todo!(),
-        // Rule::cos_stmt => todo!(),
-        // Rule::tan_stmt => todo!(),
 
         // text
         Rule::join_stmt => emit_join_stmt(pair)?,
@@ -205,8 +199,8 @@ fn emit_subproc_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         Rule::delete_stmt => emit_delete_stmt(pair)?,
 
         // map
-        // Rule::get_keys_count_stmt => todo!(), // emit_get_keys_count_stmt(pair)?,
-        // Rule::get_keys_stmt => todo!(),       // emit_get_keys_stmt(pair)?,
+        Rule::get_keys_count_stmt => emit_get_keys_count_stmt(pair)?,
+        Rule::get_keys_stmt => emit_get_keys_stmt(pair)?,
 
         // list + map
         Rule::clear_stmt => emit_clear_stmt(pair)?,
@@ -672,6 +666,28 @@ fn emit_delete_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
         list = list
     ))
 }
+
+////
+// MAP
+
+/// GET KEYS COUNT OF _ IN _
+fn emit_get_keys_count_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let map = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("{} = {}.inner_collection.size();\n", var, map))
+}
+
+/// GET KEYS OF _ IN _
+fn emit_get_keys_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
+    let mut iter = pair.into_inner();
+    let map = emit_expr(iter.next().unwrap())?;
+    let var = emit_var(iter.next().unwrap())?;
+    Ok(format!("get_indices({}, {});\n", var, map))
+}
+
+////
+// MAP + LIST
 
 /// COPY _ TO _
 fn emit_copy_stmt(pair: Pair<Rule>) -> LDPLResult<String> {
