@@ -1,6 +1,6 @@
 //! Type in the LDPL Language.
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum LDPLType {
     Number,
     Text,

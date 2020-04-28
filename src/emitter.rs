@@ -82,7 +82,7 @@ impl Emitter {
             let mut parts = def.into_inner();
             let ident = parts.next().unwrap().as_str();
             let typename = parts.next().unwrap().as_str();
-            let mut var = format!("{} {}", type_for(typename), mangle_var(ident));
+            let mut var = format!("{} {}", emit_type(typename), mangle_var(ident));
 
             if typename == "number" {
                 var.push_str(" = 0");
@@ -120,7 +120,11 @@ impl Emitter {
             let mut parts = def.into_inner();
             let ident = parts.next().unwrap();
             let typename = parts.next().unwrap().as_str();
-            out.push(format!("{}& {}", type_for(typename), self.emit_var(ident)?));
+            out.push(format!(
+                "{}& {}",
+                emit_type(typename),
+                self.emit_var(ident)?
+            ));
         }
 
         Ok(out.join(", "))
@@ -226,14 +230,31 @@ impl Emitter {
         Ok(out.join(""))
     }
 
+    /// Find the LDPLType for a variable, local or global.
+    fn var_type(&self, var: &str) -> LDPLResult<&LDPLType> {
+        let var = var.to_uppercase();
+        if let Some(t) = self.locals.get(&var) {
+            Ok(t)
+        } else if let Some(t) = self.globals.get(&var) {
+            Ok(t)
+        } else {
+            error!("No type found for var {}", var)
+        }
+    }
+
     ////
     // CONTROL FLOW
 
     /// STORE _ IN _
     fn emit_store_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
-        let val = self.emit_expr(iter.next().unwrap())?;
-        let var = self.emit_var(iter.next().unwrap())?;
+
+        let expr = iter.next().unwrap();
+        let var = iter.next().unwrap();
+        let typ = self.var_type(var.as_str())?.clone();
+        let var = self.emit_var(var)?;
+        let val = self.emit_expr_for_type(expr, &typ)?;
+
         Ok(format!("{} = {};\n", var, val))
     }
 
@@ -371,6 +392,30 @@ impl Emitter {
         };
         let right = self.emit_expr(iter.next().unwrap())?;
         Ok(format!("({} {} {})", left, sign, right))
+    }
+
+    /// Find the type for an expression.
+    fn expr_type(&mut self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
+        match expr.as_rule() {
+            Rule::var => self.var_type(expr.as_str()),
+            Rule::ident => self.var_type(expr.as_str()),
+            Rule::number => Ok(&LDPLType::Number),
+            Rule::text | Rule::linefeed => Ok(&LDPLType::Text),
+            _ => unexpected!(expr),
+        }
+    }
+
+    /// Coerce Number -> Text and Text -> Number.
+    fn emit_expr_for_type(&mut self, expr: Pair<Rule>, typename: &LDPLType) -> LDPLResult<String> {
+        let expr_type = self.expr_type(expr.clone())?;
+
+        if typename.is_number() && expr_type.is_text() {
+            Ok(format!("to_number({})", self.emit_expr(expr)?))
+        } else if typename.is_text() && expr_type.is_number() {
+            Ok(format!("to_ldpl_string({})", self.emit_expr(expr)?))
+        } else {
+            self.emit_expr(expr)
+        }
     }
 
     /// Variable, Number, or Text
@@ -882,7 +927,7 @@ file_writing_stream.close();
 }
 
 /// LDPL Type => C++ Type
-fn type_for(ldpl_type: &str) -> &str {
+fn emit_type(ldpl_type: &str) -> &str {
     match ldpl_type.to_lowercase().as_ref() {
         "number" => "ldpl_number",
         "number list" => "ldpl_list<ldpl_number>",
