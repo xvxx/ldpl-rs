@@ -85,7 +85,7 @@ done, we'll move onto these four, higher level goals:
 | absolutevalue.ldpl  | ✅         |                    |
 | arguments.ldpl      | ✅         |                    |
 | bellman-ford.ldpl   | ❌         | Infinity symbol    |
-| brainfuck.ldpl      | ❌         | Type coercion      |
+| brainfuck.ldpl      | ✅         |                    |
 | disancount.ldpl     | ✅         |                    |
 | euler.ldpl          | ✅         |                    |
 | explode.ldpl        | ❌         | ACCEPT for text    |
