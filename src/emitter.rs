@@ -807,20 +807,18 @@ impl Emitter {
     // GET LENGTH OF _ IN _
     fn emit_get_length_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
-        let it = self.emit_expr(iter.next().unwrap())?;
+        let expr = iter.next().unwrap();
         let var = self.emit_var(iter.next().unwrap())?;
+        let expr_type = self.type_of_expr(expr.clone())?;
+        let expr = self.emit_expr(expr)?;
 
-        emit!("{} = ((chText){}).size();", var, it)
-
-        /*
-        if self.is_text(it) {
-            Ok(format!("{} = ((chText){}).size();", var, it))
-        } else if self.is_list(it) {
-            Ok(format!("{} = {}.inner_collection.size();", var, it))
+        if expr_type.is_text() {
+            emit!("{} = ((chText){}).size();", var, expr)
+        } else if expr_type.is_list() {
+            emit!("{} = {}.inner_collection.size();", var, expr)
         } else {
-            unimplemented!()
+            unexpected!(expr_type)
         }
-        */
     }
 
     ////
@@ -978,6 +976,24 @@ impl Emitter {
 // HELPERS
 
 impl Emitter {
+    /// Is the expr Text?
+    fn is_text(&self, expr: Pair<Rule>) -> bool {
+        if let Ok(t) = self.type_of_expr(expr) {
+            t.is_text()
+        } else {
+            false
+        }
+    }
+
+    /// Is the expr a List?
+    fn is_list(&self, expr: Pair<Rule>) -> bool {
+        if let Ok(t) = self.type_of_expr(expr) {
+            t.is_list()
+        } else {
+            false
+        }
+    }
+
     /// Find the type for an expression.
     fn type_of_expr(&self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
         match expr.as_rule() {
