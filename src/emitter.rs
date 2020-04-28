@@ -57,7 +57,7 @@ impl Emitter {
         for pair in ast {
             match pair.as_rule() {
                 Rule::cpp_ext_stmt => todo!(),
-                Rule::data_section => out.push(self.emit_data(pair)?),
+                Rule::data_section => out.push(self.emit_data(pair, false)?),
                 Rule::create_stmt_stmt => todo!(),
                 Rule::sub_def_stmt => out.push(self.emit_sub_def_stmt(pair)?),
                 Rule::EOI => break,
@@ -73,22 +73,36 @@ impl Emitter {
 
     /// Convert `name IS TEXT` into a C++ variable declaration.
     /// Used by DATA: and LOCAL DATA: sections.
-    fn emit_data(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_data(&mut self, pair: Pair<Rule>, local: bool) -> LDPLResult<String> {
         let mut out = vec![];
 
         for def in pair.into_inner() {
             assert!(def.as_rule() == Rule::type_def);
 
             let mut parts = def.into_inner();
-            let ident = parts.next().unwrap();
+            let ident = parts.next().unwrap().as_str();
             let typename = parts.next().unwrap().as_str();
-            let mut var = format!("{} {}", type_for(typename), mangle_var(ident.as_str()));
+            let mut var = format!("{} {}", type_for(typename), mangle_var(ident));
 
             if typename == "number" {
                 var.push_str(" = 0");
             } else if typename == "text" {
                 var.push_str(r#" = """#);
             }
+
+            let ident = ident.to_string().to_uppercase();
+            let ldpltype = LDPLType::from(typename);
+            if local {
+                if self.locals.contains_key(&ident) {
+                    return error!("Duplicate declaration for variable {}", ident);
+                }
+                self.locals.insert(ident, ldpltype);
+            } else {
+                if self.globals.contains_key(&ident) {
+                    return error!("Duplicate declaration for variable {}", ident);
+                }
+                self.globals.insert(ident, ldpltype);
+            };
 
             var.push(';');
             out.push(var);
@@ -120,11 +134,12 @@ impl Emitter {
         let mut body: Vec<String> = vec![];
 
         self.in_sub = true;
+        self.locals.clear();
         for node in pair.into_inner() {
             match node.as_rule() {
                 Rule::ident => name = mangle_sub(node.as_str()),
                 Rule::sub_param_section => params = self.emit_params(node)?,
-                Rule::sub_data_section => vars = self.emit_data(node)?,
+                Rule::sub_data_section => vars = self.emit_data(node, true)?,
                 _ => body.push(self.emit_subproc_stmt(node)?),
             }
         }

@@ -9,6 +9,19 @@ pub enum LDPLType {
 }
 
 impl LDPLType {
+    /// Create an LDPLType from an ident like `NUMBER` or `text list`.
+    pub fn from(name: &str) -> Self {
+        match name.to_lowercase().as_ref() {
+            "number" => LDPLType::Number,
+            "number list" => LDPLType::List(Box::new(LDPLType::Number)),
+            "number map" | "number vector" => LDPLType::Map(Box::new(LDPLType::Number)),
+            "text" => LDPLType::Text,
+            "text list" => LDPLType::List(Box::new(LDPLType::Text)),
+            "text map" | "text vector" => LDPLType::Map(Box::new(LDPLType::Text)),
+            _ => unimplemented!(),
+        }
+    }
+
     pub fn is_number(&self) -> bool {
         LDPLType::Number == *self
     }
