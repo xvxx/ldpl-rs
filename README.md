@@ -73,9 +73,9 @@ done, we'll move onto these four, higher level goals:
 | file     | ✅         |                      |
 | list     | ❌         | Type coercion        |
 | of       | ❌         | OF syntax            |
-| quine    | ❌         | Type coercion        |
+| quine    | ✅         | Type coercion        |
 | sqrt     | ✅         |                      |
-| vector   | ❌         | Type coercion (keys) |
+| vector   | ✅         | Type coercion (keys) |
 
 ### [LDPL Examples][examples] Pass/Fail Status
 

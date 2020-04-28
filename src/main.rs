@@ -5,7 +5,6 @@ use ldpl::{
 };
 use pest::iterators::Pairs;
 use std::{
-    io::Write,
     path::Path,
     process::{Command, Stdio},
 };
@@ -182,19 +181,6 @@ fn print_ast(ast: Pairs<Rule>) {
         println!("Span:    {:?}", pair.as_span());
         println!("Text:    {}", pair.as_str());
     }
-}
-
-fn run_process(cmd: &str, args: &[&str], stdin: &str) -> LDPLResult<()> {
-    let mut cmd = Command::new(cmd);
-    let cmd = cmd.args(args);
-
-    cmd.stdin(Stdio::piped())
-        .spawn()
-        .and_then(|mut child| {
-            let child_stdin = child.stdin.as_mut().unwrap();
-            child_stdin.write_all(stdin.as_bytes())
-        })
-        .map_err(|e| error!("process error: {}", e))
 }
 
 fn print_version() {
