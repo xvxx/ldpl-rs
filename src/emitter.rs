@@ -276,9 +276,7 @@ impl Emitter {
             Rule::execute_stmt => self.emit_execute_stmt(pair)?,
 
             // create statement
-            Rule::user_stmt => {
-                panic!("Unexpected user_stmt: {:?}", pair);
-            }
+            Rule::user_stmt => unexpected!(pair),
             _ => unexpected!(pair),
         });
 
@@ -468,7 +466,7 @@ impl Emitter {
             Rule::number => self.emit_number(pair)?,
             Rule::text => pair.as_str().to_string(),
             Rule::linefeed => "\"\\n\"".to_string(),
-            _ => panic!("UNIMPLEMENTED: {:?}", pair),
+            _ => return error!("UNIMPLEMENTED: {:?}", pair),
         })
     }
 
@@ -689,9 +687,7 @@ impl Emitter {
                 Rule::var | Rule::number | Rule::text => parts.push(self.emit_expr(part)?),
                 Rule::solve_expr => parts.push(self.emit_solve_expr(part)?),
                 Rule::math_op => parts.push(part.as_str().to_string()),
-                _ => {
-                    panic!("unexpected rule: {:?}", part);
-                }
+                _ => return error!("unexpected rule: {:?}", part),
             }
         }
 
