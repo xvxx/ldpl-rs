@@ -6,8 +6,10 @@ pub mod error;
 pub mod compiler;
 pub mod emitter;
 pub mod parser;
+mod types;
 
 pub use error::LDPLError;
+pub use types::LDPLType;
 pub type LDPLResult<T> = std::result::Result<T, LDPLError>;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
