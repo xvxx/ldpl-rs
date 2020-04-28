@@ -264,7 +264,7 @@ impl Emitter {
         let txt = iter.next().unwrap().as_str();
         // remove extra preceeding \n from txt. parser limitation.
         if !txt.is_empty() {
-            Ok(format!("{} = \"{}\";\n", var, &txt[1..]))
+            Ok(format!("{} = {:?};\n", var, &txt[1..]))
         } else {
             Ok(format!("{} = \"\";\n", var))
         }
@@ -327,13 +327,13 @@ impl Emitter {
                 match param.as_rule() {
                     Rule::number => {
                         let var = format!("LPVAR_{}", var_id);
-                        prefix.push(format!("ldpl_number {} = {};", var, self.emit_expr(param)?));
+                        prefix.push(format!("ldpl_number {} = {};\n", var, self.emit_expr(param)?));
                         params.push(var);
                         var_id += 1;
                     }
                     Rule::text | Rule::linefeed => {
                         let var = format!("LPVAR_{}", var_id);
-                        prefix.push(format!("chText {} = {};", var, self.emit_expr(param)?));
+                        prefix.push(format!("chText {} = {};\n", var, self.emit_expr(param)?));
                         params.push(var);
                         var_id += 1;
                     }
@@ -574,7 +574,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let by = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
 
-        Ok(format!("{} = modulo({}, {});", var, base, by))
+        Ok(format!("{} = modulo({}, {});\n", var, base, by))
     }
 
     /// FLOOR _
@@ -592,7 +592,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
             _ => unexpected!(rule),
         }
 
-        Ok(format!("{} = floor({});", left, right))
+        Ok(format!("{} = floor({});\n", left, right))
     }
 
     /// IN _ SOLVE X
@@ -667,7 +667,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         }
         out.push(format!("{} = joinvar;", var));
 
-        Ok(out.join("\n"))
+        Ok(format!("{}\n", out.join("\n")))
     }
 
     /// JOIN _ AND _ IN _
@@ -685,7 +685,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = trimCopy({});", var, expr))
+        Ok(format!("{} = trimCopy({});\n", var, expr))
     }
 
     /// COUNT _ FROM _ IN _
@@ -705,7 +705,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let length = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
         Ok(format!(
-            "joinvar = {};\n{} = joinvar.substr({}, {});",
+            "joinvar = {};\n{} = joinvar.substr({}, {});\n",
             text, var, search, length
         ))
     }
@@ -741,7 +741,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let at = self.emit_expr(iter.next().unwrap())?;
         let from = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = charat({}, {});", var, from, at))
+        Ok(format!("{} = charat({}, {});\n", var, from, at))
     }
 
     ////
@@ -753,7 +753,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let it = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
 
-        Ok(format!("{} = ((chText){}).size();", var, it))
+        Ok(format!("{} = ((chText){}).size();\n", var, it))
 
         /*
         if self.is_text(it) {
@@ -905,18 +905,18 @@ file_writing_stream.close();
         let mut iter = pair.into_inner();
         Ok(match rule {
             Rule::execute_expr_stmt => {
-                format!("system({});", self.emit_expr(iter.next().unwrap())?)
+                format!("system({});\n", self.emit_expr(iter.next().unwrap())?)
             }
             Rule::execute_output_stmt => {
                 let expr = self.emit_expr(iter.next().unwrap())?;
                 let var = self.emit_var(iter.next().unwrap())?;
-                format!("{} = exec({});", var, expr)
+                format!("{} = exec({});\n", var, expr)
             }
             Rule::execute_exit_code_stmt => {
                 let expr = self.emit_expr(iter.next().unwrap())?;
                 let var = self.emit_var(iter.next().unwrap())?;
                 format!(
-                    "{} = (system({}) >> 8) & 0xff;", //shift wait() val and get lowest 2
+                    "{} = (system({}) >> 8) & 0xff;\n", //shift wait() val and get lowest 2
                     var, expr
                 )
             }
