@@ -996,7 +996,6 @@ impl Emitter {
                 let mut iter = var.into_inner();
                 let base = iter.next().unwrap();
                 let out = self.type_of_var(base);
-                println!(">>> {:?}", out);
                 out
             }
             _ => unexpected!(var),
