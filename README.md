@@ -62,20 +62,20 @@ done, we'll move onto these four, higher level goals:
 
 ### [LDPLTest][ldpltest] Pass/Fail Status
 
-| **Test** | **Status** | **Failure Reason**   |
-| -------- | ---------- | -------------------- |
-| basicar  | ✅         |                      |
-| basictx  | ✅         | Type coercion        |
-| conflow  | ❌         | CREATE STMT          |
-| exec     | ✅         |                      |
-| explode  | ✅         |                      |
-| fibo     | ✅         |                      |
-| file     | ✅         |                      |
-| list     | ✅         | Type coercion        |
-| of       | ❌         | OF syntax            |
-| quine    | ✅         | Type coercion        |
-| sqrt     | ✅         |                      |
-| vector   | ✅         | Type coercion (keys) |
+| **Test** | **Status** | **Failure Reason** |
+| -------- | ---------- | ------------------ |
+| basicar  | ✅         |                    |
+| basictx  | ✅         |                    |
+| conflow  | ❌         | CREATE STMT        |
+| exec     | ✅         |                    |
+| explode  | ✅         |                    |
+| fibo     | ✅         |                    |
+| file     | ✅         |                    |
+| list     | ✅         |                    |
+| of       | ❌         | OF syntax          |
+| quine    | ✅         |                    |
+| sqrt     | ✅         |                    |
+| vector   | ✅         |                    |
 
 ### [LDPL Examples][examples] Pass/Fail Status
 
