@@ -1,7 +1,8 @@
 //! The Emitter generates a String of C++ code from parsed LDPL code.
 
-use crate::{parser::Rule, LDPLResult};
+use crate::{parser::Rule, LDPLResult, LDPLType};
 use pest::iterators::{Pair, Pairs};
+use std::collections::HashMap;
 
 /// Include common C++ functions in our program.
 const CPP_HEADER: &'static str = include_str!("../lib/ldpl_header.cpp");
@@ -26,11 +27,24 @@ macro_rules! unexpected {
     };
 }
 
-pub struct Emitter;
+pub struct Emitter {
+    globals: HashMap<String, LDPLType>,
+    locals: HashMap<String, LDPLType>,
+
+    // in a sub-procedure? RETURN doesn't work outside of one.
+    in_sub: bool,
+    // in a loop? BREAK/CONTINUE only work in loops. Vec for nesting.
+    in_loop: Vec<bool>,
+}
 
 /// Turns parsed LDPL code into a string of C++ code.
 pub fn emit(ast: Pairs<Rule>) -> LDPLResult<String> {
-    let mut emitter = Emitter {};
+    let mut emitter = Emitter {
+        globals: HashMap::default(),
+        locals: HashMap::default(),
+        in_loop: vec![],
+        in_sub: false,
+    };
     emitter.emit(ast)
 }
 
@@ -105,6 +119,7 @@ impl Emitter {
         let mut vars = String::new();
         let mut body: Vec<String> = vec![];
 
+        self.in_sub = true;
         for node in pair.into_inner() {
             match node.as_rule() {
                 Rule::ident => name = mangle_sub(node.as_str()),
@@ -113,6 +128,7 @@ impl Emitter {
                 _ => body.push(self.emit_subproc_stmt(node)?),
             }
         }
+        self.in_sub = false;
 
         Ok(format!(
             "void {}({}) {{\n{}\n{}\n}}\n",
@@ -221,11 +237,18 @@ impl Emitter {
 
     /// RETURN
     fn emit_return_stmt(&mut self, _pair: Pair<Rule>) -> LDPLResult<String> {
+        if !self.in_sub {
+            return error!("RETURN can't be used outside of SUB-PROCEDURE");
+        }
+
         Ok("return;\n".to_string())
     }
 
     /// BREAK / CONTINUE
     fn emit_loop_kw_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+        if self.in_loop.is_empty() {
+            return error!("{} can't be used without FOR/WHILE loop", pair.as_str());
+        }
         Ok(format!("{};\n", pair.as_str()))
     }
 
@@ -376,10 +399,13 @@ impl Emitter {
         let test = iter.next().unwrap();
         let test = self.emit_test_stmt(test)?;
 
+        self.in_loop.push(true);
         let mut body = vec![];
         for node in iter {
             body.push(self.emit_subproc_stmt(node)?);
         }
+        self.in_loop.pop();
+
         Ok(format!("while {} {{\n{}\n}}\n", test, body.join("\n")))
     }
 
@@ -425,10 +451,12 @@ impl Emitter {
         let to = self.emit_expr(iter.next().unwrap())?;
         let step = self.emit_expr(iter.next().unwrap())?;
 
+        self.in_loop.push(true);
         let mut body = vec![];
         for node in iter {
             body.push(self.emit_subproc_stmt(node)?);
         }
+        self.in_loop.pop();
 
         let init = format!("{} = {}", var, from);
         let test = format!(
@@ -455,10 +483,12 @@ impl Emitter {
         let collection = self.emit_expr(iter.next().unwrap())?;
         let range_var = "RVAR_0"; // TODO: not really...
 
+        self.in_loop.push(true);
         let mut body = vec![];
         for node in iter {
             body.push(self.emit_subproc_stmt(node)?);
         }
+        self.in_loop.pop();
 
         Ok(format!(
             r#"
