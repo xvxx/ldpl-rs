@@ -23,7 +23,7 @@ const MAIN_FOOTER: &'static str = r#"
 
 macro_rules! unexpected {
     ($rule:expr) => {
-        panic!("Unexpected rule: {:?}", $rule);
+        return error!("Unexpected rule: {:?}", $rule);
     };
 }
 

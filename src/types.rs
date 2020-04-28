@@ -1,6 +1,6 @@
 //! Type in the LDPL Language.
 
-#[derive(PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum LDPLType {
     Number,
     Text,
@@ -48,5 +48,25 @@ impl LDPLType {
 
     pub fn is_collection(&self) -> bool {
         self.is_list() || self.is_map()
+    }
+
+    pub fn is_text_collection(&self) -> bool {
+        if let LDPLType::List(inner) = self {
+            **inner == LDPLType::Text
+        } else if let LDPLType::Map(inner) = self {
+            **inner == LDPLType::Text
+        } else {
+            false
+        }
+    }
+
+    pub fn is_number_collection(&self) -> bool {
+        if let LDPLType::List(inner) = self {
+            **inner == LDPLType::Number
+        } else if let LDPLType::Map(inner) = self {
+            **inner == LDPLType::Number
+        } else {
+            false
+        }
     }
 }
