@@ -65,7 +65,7 @@ done, we'll move onto these four, higher level goals:
 | **Test** | **Status** | **Failure Reason**   |
 | -------- | ---------- | -------------------- |
 | basicar  | ✅         |                      |
-| basictx  | ❌         | Type coercion        |
+| basictx  | ✅         | Type coercion        |
 | conflow  | ❌         | CREATE STMT          |
 | exec     | ✅         |                      |
 | explode  | ✅         |                      |
