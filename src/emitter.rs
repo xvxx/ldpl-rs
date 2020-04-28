@@ -492,17 +492,31 @@ impl Emitter {
         let inner = pair.into_inner().next().unwrap();
         match inner.as_rule() {
             Rule::ident => Ok(mangle_var(inner.as_str())),
-            Rule::lookup => {
-                let mut iter = inner.into_inner();
-                let basevar = iter.next().unwrap();
-                let mut parts = vec![self.emit_expr(basevar)?];
-                for part in iter {
-                    parts.push(format!("[{}]", self.emit_expr(part)?));
-                }
-                Ok(parts.join(""))
-            }
+            Rule::lookup => self.emit_lookup_from_iter(inner.into_inner()),
             _ => unexpected!(inner),
         }
+    }
+    // TODO: what is this
+    fn emit_lookup_from_iter(&self, mut iter: Pairs<Rule>) -> LDPLResult<String> {
+        let basevar = iter.next().unwrap();
+        let copy = iter.clone();
+        let mut parts = vec![self.emit_expr(basevar)?];
+        for part in iter {
+            // if it's an ident AND a variable AND a
+            // container, then end this lookup and nest the
+            // new one
+            if part.as_rule() == Rule::ident {
+                if let Ok(t) = self.type_of_var(part.clone()) {
+                    if t.is_collection() {
+                        parts.push(format!("[{}]", self.emit_lookup_from_iter(copy)?));
+                        break;
+                    }
+                }
+            }
+            // otherwise just keep adding index operations
+            parts.push(format!("[{}]", self.emit_expr(part)?));
+        }
+        Ok(parts.join(""))
     }
 
     /// WHILE _ DO / REPEAT

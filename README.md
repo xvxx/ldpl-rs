@@ -84,14 +84,14 @@ done, we'll move onto these four, higher level goals:
 | 99bottles.ldpl      | ✅         |                    |
 | absolutevalue.ldpl  | ✅         |                    |
 | arguments.ldpl      | ✅         |                    |
-| bellman-ford.ldpl   | ❌         | Infinity symbol    |
+| bellman-ford.ldpl   | ✅         |                    |
 | brainfuck.ldpl      | ✅         |                    |
 | disancount.ldpl     | ✅         |                    |
 | euler.ldpl          | ✅         |                    |
 | explode.ldpl        | ❌         | ACCEPT for text    |
 | factorial.ldpl      | ✅         |                    |
 | fibonacci.ldpl      | ✅         |                    |
-| floyd-warshall.ldpl | ❌         | Infinity again     |
+| floyd-warshall.ldpl | ✅         |                    |
 | helloworld.ldpl     | ✅         |                    |
 | leapyear.ldpl       | ❌         | ELSE IF            |
 | loop_counter.ldpl   | ✅         |                    |
