@@ -120,6 +120,8 @@ impl Emitter {
             let mut parts = def.into_inner();
             let ident = parts.next().unwrap();
             let typename = parts.next().unwrap().as_str();
+            self.locals
+                .insert(ident.as_str().to_string(), LDPLType::from(typename));
             out.push(format!(
                 "{}& {}",
                 emit_type(typename),
