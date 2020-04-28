@@ -465,15 +465,22 @@ impl Emitter {
         Ok(match pair.as_rule() {
             Rule::var => self.emit_var(pair)?,
             Rule::ident => mangle_var(pair.as_str()),
-            Rule::number => {
-                // trim leading 0s from numbers
-                let num = pair.as_str().trim_start_matches('0');
-                if num.is_empty() { "0" } else { num }.to_string()
-            }
+            Rule::number => self.emit_number(pair)?,
             Rule::text => pair.as_str().to_string(),
             Rule::linefeed => "\"\\n\"".to_string(),
             _ => panic!("UNIMPLEMENTED: {:?}", pair),
         })
+    }
+
+    /// Normalize a number literal.
+    /// Ex: -000.0 => 0
+    fn emit_number(&self, pair: Pair<Rule>) -> LDPLResult<String> {
+        let num = pair.as_str();
+        if let Ok(parsed) = num.parse::<f64>() {
+            Ok(parsed.to_string())
+        } else {
+            error!("Can't parse number: {}", num)
+        }
     }
 
     /// Turn an ident/lookup pair into a C++ friendly ident.
