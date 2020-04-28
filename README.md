@@ -71,7 +71,7 @@ done, we'll move onto these four, higher level goals:
 | explode  | ✅         |                      |
 | fibo     | ✅         |                      |
 | file     | ✅         |                      |
-| list     | ❌         | Type coercion        |
+| list     | ✅         | Type coercion        |
 | of       | ❌         | OF syntax            |
 | quine    | ✅         | Type coercion        |
 | sqrt     | ✅         |                      |
@@ -95,8 +95,8 @@ done, we'll move onto these four, higher level goals:
 | helloworld.ldpl     | ✅         |                    |
 | leapyear.ldpl       | ❌         | ELSE IF            |
 | loop_counter.ldpl   | ✅         |                    |
-| oddornot.ldpl       | ✅         | Type coercion      |
-| quine.ldpl          | ❌         |                    |
+| oddornot.ldpl       | ✅         |                    |
+| quine.ldpl          | ✅         |                    |
 | sqrt.ldpl           | ✅         |                    |
 | strcmp-demo.ldpl    | ✅         |                    |
 

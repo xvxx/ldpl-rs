@@ -976,24 +976,6 @@ impl Emitter {
 // HELPERS
 
 impl Emitter {
-    /// Is the expr Text?
-    fn is_text(&self, expr: Pair<Rule>) -> bool {
-        if let Ok(t) = self.type_of_expr(expr) {
-            t.is_text()
-        } else {
-            false
-        }
-    }
-
-    /// Is the expr a List?
-    fn is_list(&self, expr: Pair<Rule>) -> bool {
-        if let Ok(t) = self.type_of_expr(expr) {
-            t.is_list()
-        } else {
-            false
-        }
-    }
-
     /// Find the type for an expression.
     fn type_of_expr(&self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
         match expr.as_rule() {
