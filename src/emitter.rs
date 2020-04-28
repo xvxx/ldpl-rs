@@ -247,20 +247,19 @@ impl Emitter {
     // CONTROL FLOW
 
     /// STORE _ IN _
-    fn emit_store_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_store_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
 
         let expr = iter.next().unwrap();
         let var = iter.next().unwrap();
-        let typ = self.var_type(var.as_str())?.clone();
         let var = self.emit_var(var)?;
-        let val = self.emit_expr_for_type(expr, &typ)?;
+        let val = self.emit_expr_for_type(expr, self.var_type(var.as_str())?)?;
 
         Ok(format!("{} = {};\n", var, val))
     }
 
     /// STORE QUOTE IN _
-    fn emit_quote_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_quote_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let var = self.emit_var(iter.next().unwrap())?;
         let txt = iter.next().unwrap().as_str();
@@ -273,7 +272,7 @@ impl Emitter {
     }
 
     /// RETURN
-    fn emit_return_stmt(&mut self, _pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_return_stmt(&self, _pair: Pair<Rule>) -> LDPLResult<String> {
         if !self.in_sub {
             return error!("RETURN can't be used outside of SUB-PROCEDURE");
         }
@@ -282,7 +281,7 @@ impl Emitter {
     }
 
     /// BREAK / CONTINUE
-    fn emit_loop_kw_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_loop_kw_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         if self.in_loop.is_empty() {
             return error!("{} can't be used without FOR/WHILE loop", pair.as_str());
         }
@@ -290,19 +289,19 @@ impl Emitter {
     }
 
     /// GOTO _
-    fn emit_goto_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_goto_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let label = pair.into_inner().next().unwrap();
         Ok(format!("goto label_{};\n", mangle(label.as_str())))
     }
 
     /// LABEL _
-    fn emit_label_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_label_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let label = pair.into_inner().next().unwrap();
         Ok(format!("label_{}:\n", mangle(label.as_str())))
     }
 
     /// WAIT _ MILLISECONDS
-    fn emit_wait_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_wait_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let count = self.emit_expr(pair.into_inner().next().unwrap())?;
         Ok(format!(
             "std::this_thread::sleep_for(std::chrono::milliseconds((long int){}));\n",
@@ -311,7 +310,7 @@ impl Emitter {
     }
 
     /// EXIT
-    fn emit_exit_stmt(&mut self, _pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_exit_stmt(&self, _pair: Pair<Rule>) -> LDPLResult<String> {
         Ok("exit(0);\n".to_string())
     }
 
@@ -329,7 +328,11 @@ impl Emitter {
                 match param.as_rule() {
                     Rule::number => {
                         let var = format!("LPVAR_{}", var_id);
-                        prefix.push(format!("ldpl_number {} = {};\n", var, self.emit_expr(param)?));
+                        prefix.push(format!(
+                            "ldpl_number {} = {};\n",
+                            var,
+                            self.emit_expr(param)?
+                        ));
                         params.push(var);
                         var_id += 1;
                     }
@@ -354,7 +357,7 @@ impl Emitter {
     }
 
     /// IF and WHILE test statement
-    fn emit_test_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_test_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut out = vec![];
         for test in pair.into_inner() {
             match test.as_rule() {
@@ -378,7 +381,7 @@ impl Emitter {
     }
 
     /// Single test expression. Use _stmt for expressions with OR / AND.
-    fn emit_test_expr(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_test_expr(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let left = self.emit_expr(iter.next().unwrap())?;
         let mid = iter.next().unwrap();
@@ -396,7 +399,7 @@ impl Emitter {
     }
 
     /// Find the type for an expression.
-    fn expr_type(&mut self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
+    fn expr_type(&self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
         match expr.as_rule() {
             Rule::var => self.var_type(expr.as_str()),
             Rule::ident => self.var_type(expr.as_str()),
@@ -407,7 +410,7 @@ impl Emitter {
     }
 
     /// Coerce Number -> Text and Text -> Number.
-    fn emit_expr_for_type(&mut self, expr: Pair<Rule>, typename: &LDPLType) -> LDPLResult<String> {
+    fn emit_expr_for_type(&self, expr: Pair<Rule>, typename: &LDPLType) -> LDPLResult<String> {
         let expr_type = self.expr_type(expr.clone())?;
 
         if typename.is_number() && expr_type.is_text() {
@@ -420,7 +423,7 @@ impl Emitter {
     }
 
     /// Variable, Number, or Text
-    fn emit_expr(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_expr(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         Ok(match pair.as_rule() {
             Rule::var => self.emit_var(pair)?,
             Rule::ident => mangle_var(pair.as_str()),
@@ -432,7 +435,7 @@ impl Emitter {
     }
 
     /// Turn an ident/lookup pair into a C++ friendly ident.
-    fn emit_var(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_var(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         assert!(
             pair.as_rule() == Rule::var,
             "Expected Rule::var, got {:?}",
@@ -488,7 +491,7 @@ impl Emitter {
     }
 
     /// ELSE IF _ THEN
-    fn emit_else_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_else_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut test = None;
         for node in pair.into_inner() {
             match node.as_rule() {
@@ -570,7 +573,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     // ARITHMETIC
 
     /// MODULO _ BY _ IN _
-    fn emit_modulo_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_modulo_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let base = self.emit_expr(iter.next().unwrap())?;
         let by = self.emit_expr(iter.next().unwrap())?;
@@ -582,7 +585,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     /// FLOOR _
     /// FLOOR _ IN _
     /// TODO: only FLOOR _ in 4.4
-    fn emit_floor_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_floor_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let stmt = pair.into_inner().next().unwrap();
         let rule = stmt.as_rule();
         let mut iter = stmt.into_inner();
@@ -610,7 +613,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     // Math expression part of a SOLVE statement
-    fn emit_solve_expr(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_solve_expr(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut parts = vec![];
 
         for part in pair.into_inner() {
@@ -631,7 +634,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     // TEXT
 
     /// SPLIT _ BY _ IN _
-    fn emit_split_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_split_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let text = self.emit_expr(iter.next().unwrap())?;
         let splitter = self.emit_expr(iter.next().unwrap())?;
@@ -644,7 +647,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
 
     /// REPLACE _ FROM _ WITH _ IN _
     /// replace_stmt = { ^"REPLACE" ~ expr ~ ^"FROM" ~ expr ~ ^"WITH" ~ expr ~ ^"IN" ~ var }
-    fn emit_replace_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_replace_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let search = self.emit_expr(iter.next().unwrap())?;
         let text = self.emit_expr(iter.next().unwrap())?;
@@ -656,7 +659,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// IN _ JOIN _ _...
-    fn emit_join_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_join_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let var = self.emit_var(iter.next().unwrap())?;
 
@@ -673,7 +676,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// JOIN _ AND _ IN _
-    fn emit_old_join_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_old_join_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let left = self.emit_expr(iter.next().unwrap())?;
         let right = self.emit_expr(iter.next().unwrap())?;
@@ -683,7 +686,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// TRIM _ IN _
-    fn emit_trim_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_trim_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
@@ -691,7 +694,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// COUNT _ FROM _ IN _
-    fn emit_count_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_count_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let search = self.emit_expr(iter.next().unwrap())?;
         let text = self.emit_expr(iter.next().unwrap())?;
@@ -700,7 +703,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// SUBSTRING _ FROM _ LENGTH _ IN _
-    fn emit_substring_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_substring_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let text = self.emit_expr(iter.next().unwrap())?;
         let search = self.emit_expr(iter.next().unwrap())?;
@@ -713,7 +716,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// GET INDEX OF _ FROM _ IN _
-    fn emit_get_index_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_get_index_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let search = self.emit_expr(iter.next().unwrap())?;
         let text = self.emit_expr(iter.next().unwrap())?;
@@ -722,7 +725,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// GET CHARACTER CODE OF _ IN _
-    fn emit_get_char_code_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_get_char_code_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
@@ -730,7 +733,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// GET ASCII CHARACTER _ IN _
-    fn emit_get_ascii_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_get_ascii_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let chr = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
@@ -738,7 +741,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// GET CHARACTER AT _ FROM _ IN _
-    fn emit_get_char_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_get_char_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let at = self.emit_expr(iter.next().unwrap())?;
         let from = self.emit_expr(iter.next().unwrap())?;
@@ -750,7 +753,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     // LIST + TEXT
 
     // GET LENGTH OF _ IN _
-    fn emit_get_length_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_get_length_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let it = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
@@ -772,7 +775,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     // LIST
 
     /// PUSH _ TO _
-    fn emit_push_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_push_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let list = self.emit_var(iter.next().unwrap())?;
@@ -780,7 +783,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// DELETE LAST ELEMENT OF _
-    fn emit_delete_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_delete_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let list = self.emit_var(iter.next().unwrap())?;
         Ok(format!(
@@ -793,7 +796,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     // MAP
 
     /// GET KEYS COUNT OF _ IN _
-    fn emit_get_keys_count_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_get_keys_count_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let map = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
@@ -801,7 +804,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// GET KEYS OF _ IN _
-    fn emit_get_keys_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_get_keys_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let map = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
@@ -812,7 +815,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     // MAP + LIST
 
     /// COPY _ TO _
-    fn emit_copy_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_copy_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let from = self.emit_expr(iter.next().unwrap())?;
         let to = self.emit_var(iter.next().unwrap())?;
@@ -823,7 +826,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// CLEAR _
-    fn emit_clear_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_clear_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let collection = self.emit_var(iter.next().unwrap())?;
         Ok(format!("{}.inner_collection.clear();\n", collection))
@@ -833,7 +836,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     // IO
 
     /// DISPLAY _...
-    fn emit_display_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_display_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut parts = vec!["cout".to_string()];
         for node in pair.into_inner() {
             parts.push(self.emit_expr(node)?);
@@ -844,7 +847,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
 
     /// ACCEPT _
     /// ACCEPT _ UNTIL EOF
-    fn emit_accept_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_accept_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let stmt = pair.into_inner().next().unwrap();
 
         let eof = stmt.as_rule() == Rule::accept_eof_stmt;
@@ -861,7 +864,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// LOAD FILE _ IN _
-    fn emit_load_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_load_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let path = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
@@ -869,7 +872,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
     }
 
     /// WRITE _ TO FILE _
-    fn emit_write_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_write_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let path = self.emit_expr(iter.next().unwrap())?;
@@ -884,7 +887,7 @@ file_writing_stream.close();
     }
 
     /// APPEND _ TO FILE _
-    fn emit_append_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_append_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let path = self.emit_expr(iter.next().unwrap())?;
@@ -901,7 +904,7 @@ file_writing_stream.close();
     /// EXECUTE _
     /// EXECUTE _ AND STORE EXIT CODE IN _
     /// EXECUTE _ AND STORE OUTPUT IN _
-    fn emit_execute_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_execute_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let pair = pair.into_inner().next().unwrap();
         let rule = pair.as_rule();
         let mut iter = pair.into_inner();
