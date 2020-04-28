@@ -90,16 +90,16 @@ impl Emitter {
                 var.push_str(r#" = """#);
             }
 
-            let ident = ident.to_string().to_uppercase();
+            let ident = ident.to_string();
             let ldpltype = LDPLType::from(typename);
             if local {
                 if self.locals.contains_key(&ident) {
-                    return error!("Duplicate declaration for variable {}", ident);
+                    return error!("Duplicate declaration for variable: {}", ident);
                 }
                 self.locals.insert(ident, ldpltype);
             } else {
                 if self.globals.contains_key(&ident) {
-                    return error!("Duplicate declaration for variable {}", ident);
+                    return error!("Duplicate declaration for variable: {}", ident);
                 }
                 self.globals.insert(ident, ldpltype);
             };
@@ -232,10 +232,9 @@ impl Emitter {
 
     /// Find the LDPLType for a variable, local or global.
     fn var_type(&self, var: &str) -> LDPLResult<&LDPLType> {
-        let var = var.to_uppercase();
-        if let Some(t) = self.locals.get(&var) {
+        if let Some(t) = self.locals.get(var) {
             Ok(t)
-        } else if let Some(t) = self.globals.get(&var) {
+        } else if let Some(t) = self.globals.get(var) {
             Ok(t)
         } else {
             error!("No type found for var {}", var)

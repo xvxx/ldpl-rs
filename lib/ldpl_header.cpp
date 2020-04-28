@@ -520,19 +520,22 @@ ldpl_number input_number() {
     }
 }
 
-ldpl_number to_number(chText& textNumber) {
-    string a = textNumber.str_rep();
+ldpl_number to_number(string textNumber) {
     try {
         // This is used to disallow the use of hexadecimal and binary literals.
-        for(char i : a) {
+        for(char i : textNumber) {
             if(i != '0' && i != '1' && i != '2' && i != '3' && i != '4' &&
                i != '5' && i != '6' && i != '7' && i != '8' && i != '9' &&
                i != '-' && i != '.')
                 return 0;
         }
-        ldpl_number num = stod(a);
+        ldpl_number num = stod(textNumber);
         return num;
     } catch(const invalid_argument& ia) { return 0; }
+}
+
+ldpl_number to_number(chText& textNumber) {
+    return to_number(textNumber.str_rep());
 }
 
 string input_string() {
