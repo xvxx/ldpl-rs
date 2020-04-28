@@ -118,15 +118,11 @@ impl Emitter {
         for def in pair.into_inner() {
             assert!(def.as_rule() == Rule::type_def);
             let mut parts = def.into_inner();
-            let ident = parts.next().unwrap();
+            let ident = parts.next().unwrap().as_str();
             let typename = parts.next().unwrap().as_str();
             self.locals
-                .insert(ident.as_str().to_string(), LDPLType::from(typename));
-            out.push(format!(
-                "{}& {}",
-                emit_type(typename),
-                self.emit_var(ident)?
-            ));
+                .insert(ident.to_string(), LDPLType::from(typename));
+            out.push(format!("{}& {}", emit_type(typename), mangle_var(ident)));
         }
 
         Ok(out.join(", "))
@@ -239,7 +235,7 @@ impl Emitter {
         } else if let Some(t) = self.globals.get(var) {
             Ok(t)
         } else {
-            error!("No type found for var {}", var)
+            panic!("No type found for var {}", var)
         }
     }
 
@@ -252,10 +248,9 @@ impl Emitter {
 
         let expr = iter.next().unwrap();
         let var = iter.next().unwrap();
-        let var = self.emit_var(var)?;
         let val = self.emit_expr_for_type(expr, self.var_type(var.as_str())?)?;
 
-        Ok(format!("{} = {};\n", var, val))
+        Ok(format!("{} = {};\n", self.emit_var(var)?, val))
     }
 
     /// STORE QUOTE IN _
