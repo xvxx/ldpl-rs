@@ -229,13 +229,26 @@ impl Emitter {
     }
 
     /// Find the LDPLType for a variable, local or global.
-    fn var_type(&self, var: &str) -> LDPLResult<&LDPLType> {
-        if let Some(t) = self.locals.get(var) {
-            Ok(t)
-        } else if let Some(t) = self.globals.get(var) {
-            Ok(t)
-        } else {
-            panic!("No type found for var {}", var)
+    fn type_of_var(&self, var: Pair<Rule>) -> LDPLResult<&LDPLType> {
+        match var.as_rule() {
+            Rule::var => self.type_of_var(var.into_inner().next().unwrap()),
+            Rule::ident => {
+                if let Some(t) = self.locals.get(var.as_str()) {
+                    Ok(t)
+                } else if let Some(t) = self.globals.get(var.as_str()) {
+                    Ok(t)
+                } else {
+                    error!("No type found for {}", var)
+                }
+            }
+            Rule::lookup => {
+                let mut iter = var.into_inner();
+                let base = iter.next().unwrap();
+                let out = self.type_of_var(base);
+                println!(">>> {:?}", out);
+                out
+            }
+            _ => unexpected!(var),
         }
     }
 
@@ -248,7 +261,7 @@ impl Emitter {
 
         let expr = iter.next().unwrap();
         let var = iter.next().unwrap();
-        let val = self.emit_expr_for_type(expr, self.var_type(var.as_str())?)?;
+        let val = self.emit_expr_for_type(expr, self.type_of_var(var.clone())?)?;
 
         Ok(format!("{} = {};\n", self.emit_var(var)?, val))
     }
@@ -396,8 +409,8 @@ impl Emitter {
     /// Find the type for an expression.
     fn expr_type(&self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
         match expr.as_rule() {
-            Rule::var => self.var_type(expr.as_str()),
-            Rule::ident => self.var_type(expr.as_str()),
+            Rule::var => self.type_of_var(expr),
+            Rule::ident => self.type_of_var(expr),
             Rule::number => Ok(&LDPLType::Number),
             Rule::text | Rule::linefeed => Ok(&LDPLType::Text),
             _ => unexpected!(expr),
@@ -408,9 +421,10 @@ impl Emitter {
     fn emit_expr_for_type(&self, expr: Pair<Rule>, typename: &LDPLType) -> LDPLResult<String> {
         let expr_type = self.expr_type(expr.clone())?;
 
-        if typename.is_number() && expr_type.is_text() {
+        if typename.is_number() && (expr_type.is_text() || expr_type.is_text_collection()) {
             Ok(format!("to_number({})", self.emit_expr(expr)?))
-        } else if typename.is_text() && expr_type.is_number() {
+        } else if typename.is_text() && (expr_type.is_number() || expr_type.is_number_collection())
+        {
             Ok(format!("to_ldpl_string({})", self.emit_expr(expr)?))
         } else {
             self.emit_expr(expr)
