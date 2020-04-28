@@ -496,13 +496,16 @@ impl Emitter {
             _ => unexpected!(inner),
         }
     }
-    // TODO: what is this
+
+    /// Expects the iterator from an IDENT.into_inner() call.
+    /// Knows the difference between a:b:1 where b is a container
+    /// (a[b[1]]) and where b is a scalar (a[b][1]).
     fn emit_lookup_from_iter(&self, mut iter: Pairs<Rule>) -> LDPLResult<String> {
         let basevar = iter.next().unwrap();
-        let copy = iter.clone();
         let mut parts = vec![self.emit_expr(basevar)?];
-        for part in iter {
-            // if it's an ident AND a variable AND a
+        let mut copy = iter.clone();
+        while let Some(part) = iter.next() {
+            // If it's an ident AND a variable AND a
             // container, then end this lookup and nest the
             // new one
             if part.as_rule() == Rule::ident {
@@ -513,6 +516,9 @@ impl Emitter {
                     }
                 }
             }
+            copy.next(); // copy should be 1 step behind iter, to
+                         // capture the current variable
+
             // otherwise just keep adding index operations
             parts.push(format!("[{}]", self.emit_expr(part)?));
         }
