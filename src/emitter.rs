@@ -40,10 +40,10 @@ macro_rules! emit_line {
         format!("{}{}\n", "    ".repeat(DEPTH.load(Ordering::SeqCst)), $msg)
     };
     ($fmt:expr, $($args:expr),*) => {
-        emit_line!(format!($fmt, $($args),*));
+        emit_line!(format!($fmt, $($args),*))
     };
     ($fmt:expr, $($args:expr,)*) => {
-        emit_line!(format!($fmt, $($args,)*));
+        emit_line!(format!($fmt, $($args,)*))
     };
 }
 
@@ -54,10 +54,10 @@ macro_rules! emit {
         Ok(emit_line!($msg))
     };
     ($fmt:expr, $($args:expr),*) => {
-        emit!(format!($fmt, $($args),*));
+        emit!(format!($fmt, $($args),*))
     };
     ($fmt:expr, $($args:expr,)*) => {
-        emit!(format!($fmt, $($args,)*));
+        emit!(format!($fmt, $($args,)*))
     };
 }
 
@@ -107,6 +107,10 @@ impl Emitter {
         let mut out = vec![CPP_HEADER.to_string()];
         let mut main = MAIN_HEADER.to_string();
 
+        // Predeclared vars
+        self.globals
+            .insert("ARGV".into(), LDPLType::List(Box::new(LDPLType::Text)));
+
         for pair in ast {
             match pair.as_rule() {
                 Rule::cpp_ext_stmt => todo!(),
@@ -147,18 +151,18 @@ impl Emitter {
                 var.push_str(r#" = """#);
             }
 
-            let ident = ident.to_string();
+            let varname = ident.to_string().to_uppercase();
             let ldpltype = LDPLType::from(typename);
             if local {
-                if self.locals.contains_key(&ident) {
+                if self.locals.contains_key(&varname) {
                     return error!("Duplicate declaration for variable: {}", ident);
                 }
-                self.locals.insert(ident, ldpltype);
+                self.locals.insert(varname, ldpltype);
             } else {
-                if self.globals.contains_key(&ident) {
+                if self.globals.contains_key(&varname) {
                     return error!("Duplicate declaration for variable: {}", ident);
                 }
-                self.globals.insert(ident, ldpltype);
+                self.globals.insert(varname, ldpltype);
             };
 
             var.push(';');
@@ -992,12 +996,12 @@ impl Emitter {
         match var.as_rule() {
             Rule::var => self.type_of_var(var.into_inner().next().unwrap()),
             Rule::ident => {
-                if let Some(t) = self.locals.get(var.as_str()) {
+                if let Some(t) = self.locals.get(&var.as_str().to_uppercase()) {
                     Ok(t)
-                } else if let Some(t) = self.globals.get(var.as_str()) {
+                } else if let Some(t) = self.globals.get(&var.as_str().to_uppercase()) {
                     Ok(t)
                 } else {
-                    error!("No type found for {}", var)
+                    error!("No type found for {:?}", var)
                 }
             }
             Rule::lookup => {
