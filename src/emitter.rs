@@ -231,7 +231,7 @@ impl Emitter {
             Rule::label_stmt => self.emit_label_stmt(pair)?,
             Rule::exit_stmt => self.emit_exit_stmt(pair)?,
             Rule::wait_stmt => self.emit_wait_stmt(pair)?,
-            Rule::store_quote_stmt => self.emit_quote_stmt(pair)?,
+            Rule::store_quote_stmt => self.emit_store_quote_stmt(pair)?,
             Rule::store_stmt => self.emit_store_stmt(pair)?,
 
             // math
@@ -300,13 +300,17 @@ impl Emitter {
     }
 
     /// STORE QUOTE IN _
-    fn emit_quote_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_store_quote_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let var = self.emit_var(iter.next().unwrap())?;
         let txt = iter.next().unwrap().as_str();
         // remove extra preceeding \n from txt. parser limitation.
         if !txt.is_empty() {
-            emit!("{} = {:?};", var, &txt[1..])
+            emit!(
+                r#"{} = "{}";"#,
+                var,
+                &txt[1..].replace("\n", "\\\n\\n").replace("\"", "\\\"")
+            )
         } else {
             emit!("{} = \"\";", var)
         }
