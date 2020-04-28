@@ -63,7 +63,6 @@ fn run() -> LDPLResult<()> {
     let mut command = DEFAULT_COMMAND;
     let mut path = String::new();
     let mut bin = String::new();
-    let mut fmt = false;
 
     // split args on = so -o=file is the same as -o file
     let mut new_args = vec![];
@@ -89,7 +88,6 @@ fn run() -> LDPLResult<()> {
                 print_version();
                 return Ok(());
             }
-            "--fmt" => fmt = true,
             "emit" | "-r" => command = "emit",
             "-o" => {
                 if args.is_empty() {
@@ -102,6 +100,7 @@ fn run() -> LDPLResult<()> {
             "check" => command = "check",
             "build" => command = "build",
             "run" => command = "run",
+            _ if arg.starts_with('-') => error!("Unknown flag {}", arg),
             _ => path = arg,
         }
     }
@@ -149,11 +148,7 @@ fn run() -> LDPLResult<()> {
     info!("Compiling {}", bin);
     let cpp = emitter::emit(ast)?;
     if command == "emit" {
-        if fmt {
-            print_fmt(&cpp)?;
-        } else {
-            println!("{}", cpp);
-        }
+        println!("{}", cpp);
         return Ok(());
     }
 
@@ -187,11 +182,6 @@ fn print_ast(ast: Pairs<Rule>) {
         println!("Span:    {:?}", pair.as_span());
         println!("Text:    {}", pair.as_str());
     }
-}
-
-/// Use clang-format to format raw C++.
-fn print_fmt(cpp: &str) -> LDPLResult<()> {
-    run_process("clang-format", &["--assume-filename=ldpl.cpp"], cpp)
 }
 
 fn run_process(cmd: &str, args: &[&str], stdin: &str) -> LDPLResult<()> {
