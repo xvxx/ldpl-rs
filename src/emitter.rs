@@ -2,7 +2,13 @@
 
 use crate::{parser::Rule, LDPLResult, LDPLType};
 use pest::iterators::{Pair, Pairs};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicUsize, Ordering},
+};
+
+/// Track indentation depth.
+static DEPTH: AtomicUsize = AtomicUsize::new(0);
 
 /// Include common C++ functions in our program.
 const CPP_HEADER: &'static str = include_str!("../lib/ldpl_header.cpp");
@@ -21,12 +27,59 @@ const MAIN_FOOTER: &'static str = r#"
 }
 "#;
 
+/// Call when an unexpected Pair/Rule is encountered.
 macro_rules! unexpected {
     ($rule:expr) => {
         return error!("Unexpected rule: {:?}", $rule);
     };
 }
 
+/// Emit a single line with indentation. Used to build multi-line responses.
+macro_rules! emit_line {
+    ($msg:expr) => {
+        format!("{}{}\n", "    ".repeat(DEPTH.load(Ordering::SeqCst)), $msg)
+    };
+    ($fmt:expr, $($args:expr),*) => {
+        emit_line!(format!($fmt, $($args),*));
+    };
+    ($fmt:expr, $($args:expr,)*) => {
+        emit_line!(format!($fmt, $($args,)*));
+    };
+}
+
+/// Print a line of code at the current indentation level with a
+/// trailing newline.
+macro_rules! emit {
+    ($msg:expr) => {
+        Ok(emit_line!($msg))
+    };
+    ($fmt:expr, $($args:expr),*) => {
+        emit!(format!($fmt, $($args),*));
+    };
+    ($fmt:expr, $($args:expr,)*) => {
+        emit!(format!($fmt, $($args,)*));
+    };
+}
+
+/// Increase indentation level (depth)
+macro_rules! indent {
+    () => {
+        DEPTH.fetch_add(1, Ordering::SeqCst);
+    };
+}
+
+/// Decrease indentation level
+macro_rules! dedent {
+    () => {
+        if DEPTH.load(Ordering::SeqCst) > 0 {
+            DEPTH.fetch_sub(1, Ordering::SeqCst);
+        }
+    };
+}
+
+/// State of our LDPL program, including variables and defined
+/// sub-procedures. Eventually we'll move this into a Parser so we can
+/// have multiple emitters (for different languages).
 pub struct Emitter {
     globals: HashMap<String, LDPLType>,
     locals: HashMap<String, LDPLType>,
@@ -61,14 +114,18 @@ impl Emitter {
                 Rule::create_stmt_stmt => todo!(),
                 Rule::sub_def_stmt => out.push(self.emit_sub_def_stmt(pair)?),
                 Rule::EOI => break,
-                _ => main.push_str(&self.emit_subproc_stmt(pair)?),
+                _ => {
+                    indent!();
+                    main.push_str(&self.emit_subproc_stmt(pair)?);
+                    dedent!();
+                }
             }
         }
 
         main.push_str(MAIN_FOOTER);
         out.push(main);
 
-        Ok(out.join("\n"))
+        Ok(out.join(""))
     }
 
     /// Convert `name IS TEXT` into a C++ variable declaration.
@@ -108,7 +165,7 @@ impl Emitter {
             out.push(var);
         }
 
-        Ok(out.join("\n"))
+        Ok(format!("{}\n\n", out.join("\n")))
     }
 
     /// Convert a param list into a C++ function signature params list.
@@ -137,6 +194,7 @@ impl Emitter {
 
         self.in_sub = true;
         self.locals.clear();
+        indent!();
         for node in pair.into_inner() {
             match node.as_rule() {
                 Rule::ident => name = mangle_sub(node.as_str()),
@@ -145,15 +203,10 @@ impl Emitter {
                 _ => body.push(self.emit_subproc_stmt(node)?),
             }
         }
+        dedent!();
         self.in_sub = false;
 
-        Ok(format!(
-            "void {}({}) {{\n{}\n{}\n}}\n",
-            name,
-            params,
-            vars,
-            body.join("\n"),
-        ))
+        emit!("void {}({}) {{{}\n{}}}", name, params, vars, body.join(""),)
     }
 
     /// Emit a stmt from the PROCEDURE: section of a file or function.
@@ -228,30 +281,6 @@ impl Emitter {
         Ok(out.join(""))
     }
 
-    /// Find the LDPLType for a variable, local or global.
-    fn type_of_var(&self, var: Pair<Rule>) -> LDPLResult<&LDPLType> {
-        match var.as_rule() {
-            Rule::var => self.type_of_var(var.into_inner().next().unwrap()),
-            Rule::ident => {
-                if let Some(t) = self.locals.get(var.as_str()) {
-                    Ok(t)
-                } else if let Some(t) = self.globals.get(var.as_str()) {
-                    Ok(t)
-                } else {
-                    error!("No type found for {}", var)
-                }
-            }
-            Rule::lookup => {
-                let mut iter = var.into_inner();
-                let base = iter.next().unwrap();
-                let out = self.type_of_var(base);
-                println!(">>> {:?}", out);
-                out
-            }
-            _ => unexpected!(var),
-        }
-    }
-
     ////
     // CONTROL FLOW
 
@@ -263,7 +292,7 @@ impl Emitter {
         let var = iter.next().unwrap();
         let val = self.emit_expr_for_type(expr, self.type_of_var(var.clone())?)?;
 
-        Ok(format!("{} = {};\n", self.emit_var(var)?, val))
+        emit!("{} = {};", self.emit_var(var)?, val)
     }
 
     /// STORE QUOTE IN _
@@ -273,9 +302,9 @@ impl Emitter {
         let txt = iter.next().unwrap().as_str();
         // remove extra preceeding \n from txt. parser limitation.
         if !txt.is_empty() {
-            Ok(format!("{} = {:?};\n", var, &txt[1..]))
+            emit!("{} = {:?};", var, &txt[1..])
         } else {
-            Ok(format!("{} = \"\";\n", var))
+            emit!("{} = \"\";", var)
         }
     }
 
@@ -284,8 +313,7 @@ impl Emitter {
         if !self.in_sub {
             return error!("RETURN can't be used outside of SUB-PROCEDURE");
         }
-
-        Ok("return;\n".to_string())
+        emit!("return;")
     }
 
     /// BREAK / CONTINUE
@@ -293,33 +321,33 @@ impl Emitter {
         if self.in_loop.is_empty() {
             return error!("{} can't be used without FOR/WHILE loop", pair.as_str());
         }
-        Ok(format!("{};\n", pair.as_str()))
+        emit!("{};", pair.as_str())
     }
 
     /// GOTO _
     fn emit_goto_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let label = pair.into_inner().next().unwrap();
-        Ok(format!("goto label_{};\n", mangle(label.as_str())))
+        emit!("goto label_{};", mangle(label.as_str()))
     }
 
     /// LABEL _
     fn emit_label_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let label = pair.into_inner().next().unwrap();
-        Ok(format!("label_{}:\n", mangle(label.as_str())))
+        emit!("label_{}:", mangle(label.as_str()))
     }
 
     /// WAIT _ MILLISECONDS
     fn emit_wait_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let count = self.emit_expr(pair.into_inner().next().unwrap())?;
-        Ok(format!(
-            "std::this_thread::sleep_for(std::chrono::milliseconds((long int){}));\n",
+        emit!(
+            "std::this_thread::sleep_for(std::chrono::milliseconds((long int){}));",
             count
-        ))
+        )
     }
 
     /// EXIT
     fn emit_exit_stmt(&self, _pair: Pair<Rule>) -> LDPLResult<String> {
-        Ok("exit(0);\n".to_string())
+        emit!("exit(0);")
     }
 
     /// CALL _ WITH _ ...
@@ -336,8 +364,8 @@ impl Emitter {
                 match param.as_rule() {
                     Rule::number => {
                         let var = format!("LPVAR_{}", var_id);
-                        prefix.push(format!(
-                            "ldpl_number {} = {};\n",
+                        prefix.push(emit_line!(
+                            "ldpl_number {} = {};",
                             var,
                             self.emit_expr(param)?
                         ));
@@ -346,7 +374,7 @@ impl Emitter {
                     }
                     Rule::text | Rule::linefeed => {
                         let var = format!("LPVAR_{}", var_id);
-                        prefix.push(format!("chText {} = {};\n", var, self.emit_expr(param)?));
+                        prefix.push(emit_line!("chText {} = {};", var, self.emit_expr(param)?));
                         params.push(var);
                         var_id += 1;
                     }
@@ -357,10 +385,9 @@ impl Emitter {
         }
 
         Ok(format!(
-            "{}\n{}({});\n",
-            prefix.join("\n"),
-            mangle_sub(ident.as_str()),
-            params.join(", ")
+            "{}{}",
+            prefix.join(""),
+            emit_line!("{}({});", mangle_sub(ident.as_str()), params.join(", "))
         ))
     }
 
@@ -404,17 +431,6 @@ impl Emitter {
         };
         let right = self.emit_expr(iter.next().unwrap())?;
         Ok(format!("({} {} {})", left, sign, right))
-    }
-
-    /// Find the type for an expression.
-    fn expr_type(&self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
-        match expr.as_rule() {
-            Rule::var => self.type_of_var(expr),
-            Rule::ident => self.type_of_var(expr),
-            Rule::number => Ok(&LDPLType::Number),
-            Rule::text | Rule::linefeed => Ok(&LDPLType::Text),
-            _ => unexpected!(expr),
-        }
     }
 
     /// Coerce Number -> Text and Text -> Number.
@@ -474,12 +490,19 @@ impl Emitter {
 
         self.in_loop.push(true);
         let mut body = vec![];
+        indent!();
         for node in iter {
             body.push(self.emit_subproc_stmt(node)?);
         }
+        dedent!();
         self.in_loop.pop();
 
-        Ok(format!("while {} {{\n{}\n}}\n", test, body.join("\n")))
+        Ok(format!(
+            "{}{}{}",
+            emit_line!("while {} {{", test),
+            body.join(""),
+            emit_line!("}")
+        ))
     }
 
     /// IF _ THEN / END IF
@@ -489,14 +512,21 @@ impl Emitter {
         let test = self.emit_test_stmt(test)?;
 
         let mut body = vec![];
+        indent!();
         for node in iter {
             match node.as_rule() {
                 Rule::else_stmt => body.push(self.emit_else_stmt(node)?),
                 _ => body.push(self.emit_subproc_stmt(node)?),
             }
         }
+        dedent!();
 
-        Ok(format!("if {} {{\n{}\n}}\n", test, body.join("")))
+        Ok(format!(
+            "{}{}{}",
+            emit_line!("if {} {{", test),
+            body.join(""),
+            emit_line!("}")
+        ))
     }
 
     /// ELSE IF _ THEN
@@ -509,11 +539,14 @@ impl Emitter {
             }
         }
 
-        if test.is_some() {
-            Ok(format!("}} else if {} {{\n", test.unwrap()))
+        dedent!();
+        let out = if test.is_some() {
+            emit!("}} else if {} {{", test.unwrap())
         } else {
-            Ok(format!("}} else {{\n"))
-        }
+            emit!("} else {")
+        };
+        indent!();
+        out
     }
 
     /// FOR _ IN _ TO _ STEP _ DO / REPEAT
@@ -525,10 +558,12 @@ impl Emitter {
         let step = self.emit_expr(iter.next().unwrap())?;
 
         self.in_loop.push(true);
+        indent!();
         let mut body = vec![];
         for node in iter {
             body.push(self.emit_subproc_stmt(node)?);
         }
+        dedent!();
         self.in_loop.pop();
 
         let init = format!("{} = {}", var, from);
@@ -541,11 +576,10 @@ impl Emitter {
         let incr = format!("{} += {}", var, step);
 
         Ok(format!(
-            "for({init}; {test}; {incr}) {{\n    {body}\n}}",
-            init = init,
-            test = test,
-            incr = incr,
-            body = body.join(""),
+            "{}{}{}",
+            emit_line!("for({}; {}; {}) {{", init, test, incr),
+            body.join(""),
+            emit_line!("}")
         ))
     }
 
@@ -557,24 +591,24 @@ impl Emitter {
         let range_var = "RVAR_0"; // TODO: not really...
 
         self.in_loop.push(true);
+        indent!();
         let mut body = vec![];
         for node in iter {
             body.push(self.emit_subproc_stmt(node)?);
         }
+        dedent!();
         self.in_loop.pop();
 
         Ok(format!(
-            r#"
-
-for (auto& {range_var} : {collection}.inner_collection) {{
-    {real_var} = {range_var};
-    {body}
-}}
-"#,
-            range_var = range_var,
-            collection = collection,
-            real_var = ident,
-            body = body.join(""),
+            "{}{}{}{}",
+            emit_line!(
+                "for (auto& {} : {}.inner_collection) {{",
+                range_var,
+                collection
+            ),
+            emit_line!("{} = {};", ident, range_var),
+            body.join(""),
+            emit_line!("}")
         ))
     }
 
@@ -588,7 +622,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let by = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
 
-        Ok(format!("{} = modulo({}, {});\n", var, base, by))
+        emit!("{} = modulo({}, {});", var, base, by)
     }
 
     /// FLOOR _
@@ -606,7 +640,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
             _ => unexpected!(rule),
         }
 
-        Ok(format!("{} = floor({});\n", left, right))
+        emit!("{} = floor({});", left, right)
     }
 
     /// IN _ SOLVE X
@@ -614,11 +648,11 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let ident = iter.next().unwrap();
 
-        Ok(format!(
-            "{} = {};\n",
+        emit!(
+            "{} = {};",
             self.emit_var(ident)?,
             self.emit_solve_expr(iter.next().unwrap())?
-        ))
+        )
     }
 
     // Math expression part of a SOLVE statement
@@ -648,10 +682,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let text = self.emit_expr(iter.next().unwrap())?;
         let splitter = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!(
-            "{} = utf8_split_list({}, {});\n",
-            var, text, splitter
-        ))
+        emit!("{} = utf8_split_list({}, {});", var, text, splitter)
     }
 
     /// REPLACE _ FROM _ WITH _ IN _
@@ -663,8 +694,8 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let replacement = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
 
-        Ok(format!("{} = str_replace(((chText){}).str_rep(), ((chText){}).str_rep() ((chText){}).str_rep());\n",
-    var, text, search, replacement))
+        emit!("{} = str_replace(((chText){}).str_rep(), ((chText){}).str_rep() ((chText){}).str_rep());",
+            var, text, search, replacement)
     }
 
     /// IN _ JOIN _ _...
@@ -672,16 +703,16 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let var = self.emit_var(iter.next().unwrap())?;
 
-        let mut out = vec![r#"joinvar = "";"#.to_string()];
+        let mut out = vec![emit_line!(r#"joinvar = "";"#)];
         for expr in iter {
-            out.push(format!(
+            out.push(emit_line!(
                 "join(joinvar, {}, joinvar);",
                 self.emit_expr(expr)?
             ));
         }
-        out.push(format!("{} = joinvar;", var));
+        out.push(emit_line!("{} = joinvar;", var));
 
-        Ok(format!("{}\n", out.join("\n")))
+        Ok(format!("{}", out.join("")))
     }
 
     /// JOIN _ AND _ IN _
@@ -691,7 +722,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let right = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
 
-        Ok(format!("join({}, {}, {});\n", left, right, var))
+        emit!("join({}, {}, {});", left, right, var)
     }
 
     /// TRIM _ IN _
@@ -699,7 +730,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = trimCopy({});\n", var, expr))
+        emit!("{} = trimCopy({});", var, expr)
     }
 
     /// COUNT _ FROM _ IN _
@@ -708,7 +739,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let search = self.emit_expr(iter.next().unwrap())?;
         let text = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = utf8Count({}, {});\n", var, text, search))
+        emit!("{} = utf8Count({}, {});", var, text, search)
     }
 
     /// SUBSTRING _ FROM _ LENGTH _ IN _
@@ -718,9 +749,11 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let search = self.emit_expr(iter.next().unwrap())?;
         let length = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
+
         Ok(format!(
-            "joinvar = {};\n{} = joinvar.substr({}, {});\n",
-            text, var, search, length
+            "{}{}",
+            emit_line!("joinvar = {}", text),
+            emit_line!("{} = joinvar.substr({}, {});", var, search, length)
         ))
     }
 
@@ -730,7 +763,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let search = self.emit_expr(iter.next().unwrap())?;
         let text = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = utf8GetIndexOf({}, {});\n", var, text, search))
+        emit!("{} = utf8GetIndexOf({}, {});", var, text, search)
     }
 
     /// GET CHARACTER CODE OF _ IN _
@@ -738,7 +771,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = get_char_num({});\n", var, expr))
+        emit!("{} = get_char_num({});", var, expr)
     }
 
     /// GET ASCII CHARACTER _ IN _
@@ -746,7 +779,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let chr = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = (char)({});\n", var, chr))
+        emit!("{} = (char)({});", var, chr)
     }
 
     /// GET CHARACTER AT _ FROM _ IN _
@@ -755,7 +788,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let at = self.emit_expr(iter.next().unwrap())?;
         let from = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = charat({}, {});\n", var, from, at))
+        emit!("{} = charat({}, {});", var, from, at)
     }
 
     ////
@@ -767,7 +800,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let it = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
 
-        Ok(format!("{} = ((chText){}).size();\n", var, it))
+        emit!("{} = ((chText){}).size();", var, it)
 
         /*
         if self.is_text(it) {
@@ -788,15 +821,15 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let list = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{}.inner_collection.push_back({});\n", list, expr))
+        emit!("{}.inner_collection.push_back({});", list, expr)
     }
 
     /// DELETE LAST ELEMENT OF _
     fn emit_delete_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let list = self.emit_var(iter.next().unwrap())?;
-        Ok(format!(
-            "if({list}.inner_collection.size() > 0) {list}.inner_collection.pop_back();\n",
+        emit!(format!(
+            "if({list}.inner_collection.size() > 0) {list}.inner_collection.pop_back();",
             list = list
         ))
     }
@@ -809,7 +842,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let map = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{} = {}.inner_collection.size();\n", var, map))
+        emit!("{} = {}.inner_collection.size();", var, map)
     }
 
     /// GET KEYS OF _ IN _
@@ -817,7 +850,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let map = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("get_indices({}, {});\n", var, map))
+        emit!("get_indices({}, {});", var, map)
     }
 
     ////
@@ -828,17 +861,14 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let from = self.emit_expr(iter.next().unwrap())?;
         let to = self.emit_var(iter.next().unwrap())?;
-        Ok(format!(
-            "{}.inner_collection = {}.inner_collection;\n",
-            to, from
-        ))
+        emit!("{}.inner_collection = {}.inner_collection;", to, from)
     }
 
     /// CLEAR _
     fn emit_clear_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let collection = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("{}.inner_collection.clear();\n", collection))
+        emit!("{}.inner_collection.clear();", collection)
     }
 
     ////
@@ -851,7 +881,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
             parts.push(self.emit_expr(node)?);
         }
         parts.push("flush".into());
-        Ok(format!("{};\n", parts.join(" << ")))
+        emit!("{};", parts.join(" << "))
     }
 
     /// ACCEPT _
@@ -869,7 +899,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
             "input_number()"
         };
 
-        Ok(format!("{} = {};\n", self.emit_var(ident)?, fun))
+        emit!("{} = {};", self.emit_var(ident)?, fun)
     }
 
     /// LOAD FILE _ IN _
@@ -877,7 +907,7 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let path = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
-        Ok(format!("load_file({}, {});\n", path, var))
+        emit!("load_file({}, {});", path, var)
     }
 
     /// WRITE _ TO FILE _
@@ -885,13 +915,11 @@ for (auto& {range_var} : {collection}.inner_collection) {{
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let path = self.emit_expr(iter.next().unwrap())?;
-        Ok(format!(
-            r#"
-file_writing_stream.open(expandHomeDirectory(((chText){}).str_rep()), ios_base::out);
-file_writing_stream << {};
-file_writing_stream.close();
-"#,
-            path, expr
+
+        Ok(format!("{}{}{}",
+            emit_line!("file_writing_stream.open(expandHomeDirectory(((chText){}).str_rep()), ios_base::out);", path),
+            emit_line!("file_writing_stream << {};", expr),
+            emit_line!("file_writing_stream.close();")
         ))
     }
 
@@ -900,13 +928,11 @@ file_writing_stream.close();
         let mut iter = pair.into_inner();
         let expr = self.emit_expr(iter.next().unwrap())?;
         let path = self.emit_expr(iter.next().unwrap())?;
-        Ok(format!(
-            r#"
-file_writing_stream.open(expandHomeDirectory(((chText){}).str_rep()), ios_base::app);
-file_writing_stream << {};
-file_writing_stream.close();
-"#,
-            path, expr
+
+        Ok(format!("{}{}{}",
+            emit_line!("file_writing_stream.open(expandHomeDirectory(((chText){}).str_rep()), ios_base::app);", path),
+            emit_line!("file_writing_stream << {};", expr),
+            emit_line!("file_writing_stream.close();")
         ))
     }
 
@@ -917,25 +943,64 @@ file_writing_stream.close();
         let pair = pair.into_inner().next().unwrap();
         let rule = pair.as_rule();
         let mut iter = pair.into_inner();
-        Ok(match rule {
-            Rule::execute_expr_stmt => {
-                format!("system({});\n", self.emit_expr(iter.next().unwrap())?)
-            }
+        match rule {
+            Rule::execute_expr_stmt => emit!("system({});", self.emit_expr(iter.next().unwrap())?),
             Rule::execute_output_stmt => {
                 let expr = self.emit_expr(iter.next().unwrap())?;
                 let var = self.emit_var(iter.next().unwrap())?;
-                format!("{} = exec({});\n", var, expr)
+                emit!("{} = exec({});", var, expr)
             }
             Rule::execute_exit_code_stmt => {
                 let expr = self.emit_expr(iter.next().unwrap())?;
                 let var = self.emit_var(iter.next().unwrap())?;
-                format!(
-                    "{} = (system({}) >> 8) & 0xff;\n", //shift wait() val and get lowest 2
-                    var, expr
+                emit!(
+                    "{} = (system({}) >> 8) & 0xff;", //shift wait() val and get lowest 2
+                    var,
+                    expr
                 )
             }
             _ => unexpected!(rule),
-        })
+        }
+    }
+}
+
+////
+// HELPERS
+
+impl Emitter {
+    /// Find the type for an expression.
+    fn expr_type(&self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
+        match expr.as_rule() {
+            Rule::var => self.type_of_var(expr),
+            Rule::ident => self.type_of_var(expr),
+            Rule::number => Ok(&LDPLType::Number),
+            Rule::text | Rule::linefeed => Ok(&LDPLType::Text),
+            _ => unexpected!(expr),
+        }
+    }
+
+    /// Find the LDPLType for a variable, local or global.
+    fn type_of_var(&self, var: Pair<Rule>) -> LDPLResult<&LDPLType> {
+        match var.as_rule() {
+            Rule::var => self.type_of_var(var.into_inner().next().unwrap()),
+            Rule::ident => {
+                if let Some(t) = self.locals.get(var.as_str()) {
+                    Ok(t)
+                } else if let Some(t) = self.globals.get(var.as_str()) {
+                    Ok(t)
+                } else {
+                    error!("No type found for {}", var)
+                }
+            }
+            Rule::lookup => {
+                let mut iter = var.into_inner();
+                let base = iter.next().unwrap();
+                let out = self.type_of_var(base);
+                println!(">>> {:?}", out);
+                out
+            }
+            _ => unexpected!(var),
+        }
     }
 }
 
