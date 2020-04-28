@@ -708,7 +708,7 @@ impl Emitter {
         let replacement = self.emit_expr(iter.next().unwrap())?;
         let var = self.emit_var(iter.next().unwrap())?;
 
-        emit!("{} = str_replace(((chText){}).str_rep(), ((chText){}).str_rep() ((chText){}).str_rep());",
+        emit!("{} = str_replace(((chText){}).str_rep(), ((chText){}).str_rep(), ((chText){}).str_rep());",
             var, text, search, replacement)
     }
 
@@ -721,7 +721,7 @@ impl Emitter {
         for expr in iter {
             out.push(emit_line!(
                 "join(joinvar, {}, joinvar);",
-                self.emit_expr(expr)?
+                self.emit_expr_for_type(expr, &LDPLType::Text)?
             ));
         }
         out.push(emit_line!("{} = joinvar;", var));
@@ -732,8 +732,8 @@ impl Emitter {
     /// JOIN _ AND _ IN _
     fn emit_old_join_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
-        let left = self.emit_expr(iter.next().unwrap())?;
-        let right = self.emit_expr(iter.next().unwrap())?;
+        let left = self.emit_expr_for_type(iter.next().unwrap(), &LDPLType::Text)?;
+        let right = self.emit_expr_for_type(iter.next().unwrap(), &LDPLType::Text)?;
         let var = self.emit_var(iter.next().unwrap())?;
 
         emit!("join({}, {}, {});", left, right, var)
@@ -766,7 +766,7 @@ impl Emitter {
 
         Ok(format!(
             "{}{}",
-            emit_line!("joinvar = {}", text),
+            emit_line!("joinvar = {};", text),
             emit_line!("{} = joinvar.substr({}, {});", var, search, length)
         ))
     }
