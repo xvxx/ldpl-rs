@@ -930,12 +930,16 @@ impl Emitter {
 
         let eof = stmt.as_rule() == Rule::accept_eof_stmt;
         let ident = stmt.into_inner().next().unwrap();
+        let vartype = self.type_of_var(ident.clone())?;
 
         let fun = if eof {
             "input_until_eof()"
-        } else {
-            // TODO check for text vs number
+        } else if vartype.is_text() {
+            "input_string()"
+        } else if vartype.is_number() {
             "input_number()"
+        } else {
+            unexpected!(ident);
         };
 
         emit!("{} = {};", self.emit_var(ident)?, fun)
