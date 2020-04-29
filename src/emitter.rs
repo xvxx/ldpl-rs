@@ -574,13 +574,13 @@ impl Emitter {
 
     /// ELSE IF _ THEN
     fn emit_else_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
-        let mut test = None;
-        for node in pair.into_inner() {
-            match node.as_rule() {
-                Rule::test_expr => test = Some(self.emit_test_stmt(node)?),
-                _ => unexpected!(node),
-            }
-        }
+        let mut iter = pair.into_inner();
+
+        let test = if let Some(test_expr) = iter.next() {
+            Some(self.emit_test_stmt(test_expr)?)
+        } else {
+            None
+        };
 
         dedent!();
         let out = if test.is_some() {

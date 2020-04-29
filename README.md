@@ -88,7 +88,7 @@ done, we'll move onto these four, higher level goals:
 | brainfuck.ldpl      | ✅         |                    |
 | disancount.ldpl     | ✅         |                    |
 | euler.ldpl          | ✅         |                    |
-| explode.ldpl        | ❌         | ACCEPT for text    |
+| explode.ldpl        | ✅         |                    |
 | factorial.ldpl      | ✅         |                    |
 | fibonacci.ldpl      | ✅         |                    |
 | floyd-warshall.ldpl | ✅         |                    |
