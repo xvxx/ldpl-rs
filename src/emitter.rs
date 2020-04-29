@@ -27,6 +27,19 @@ const MAIN_FOOTER: &'static str = r#"
 }
 "#;
 
+/// State of our LDPL program, including variables and defined
+/// sub-procedures. Eventually we'll move this into a Parser so we can
+/// have multiple emitters (for different languages).
+pub struct Emitter {
+    globals: HashMap<String, LDPLType>,
+    locals: HashMap<String, LDPLType>,
+
+    // in a sub-procedure? RETURN doesn't work outside of one.
+    in_sub: bool,
+    // in a loop? BREAK/CONTINUE only work in loops. Vec for nesting.
+    in_loop: Vec<bool>,
+}
+
 /// Call when an unexpected Pair/Rule is encountered.
 macro_rules! unexpected {
     ($rule:expr) => {
@@ -75,19 +88,6 @@ macro_rules! dedent {
             DEPTH.fetch_sub(1, Ordering::SeqCst);
         }
     };
-}
-
-/// State of our LDPL program, including variables and defined
-/// sub-procedures. Eventually we'll move this into a Parser so we can
-/// have multiple emitters (for different languages).
-pub struct Emitter {
-    globals: HashMap<String, LDPLType>,
-    locals: HashMap<String, LDPLType>,
-
-    // in a sub-procedure? RETURN doesn't work outside of one.
-    in_sub: bool,
-    // in a loop? BREAK/CONTINUE only work in loops. Vec for nesting.
-    in_loop: Vec<bool>,
 }
 
 /// Turns parsed LDPL code into a string of C++ code.
@@ -398,27 +398,30 @@ impl Emitter {
     }
 
     /// IF and WHILE test statement
-    fn emit_test_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn emit_test_stmt(&self, test: Pair<Rule>) -> LDPLResult<String> {
         let mut out = vec![];
-        for test in pair.into_inner() {
-            match test.as_rule() {
-                Rule::or_test_expr => {
-                    let mut iter = test.into_inner();
-                    let left = self.emit_test_expr(iter.next().unwrap())?;
-                    let right = self.emit_test_expr(iter.next().unwrap())?;
-                    out.push(format!("({} || {})", left, right));
+        match test.as_rule() {
+            Rule::test_expr => {
+                for t in test.into_inner() {
+                    out.push(self.emit_test_stmt(t)?);
                 }
-                Rule::and_test_expr => {
-                    let mut iter = test.into_inner();
-                    let left = self.emit_test_expr(iter.next().unwrap())?;
-                    let right = self.emit_test_expr(iter.next().unwrap())?;
-                    out.push(format!("({} && {})", left, right));
-                }
-                Rule::one_test_expr => out.push(self.emit_test_expr(test)?),
-                _ => unexpected!(test),
             }
+            Rule::or_test_expr => {
+                let mut iter = test.into_inner();
+                let left = self.emit_test_stmt(iter.next().unwrap())?;
+                let right = self.emit_test_stmt(iter.next().unwrap())?;
+                out.push(format!("({} || {})", left, right));
+            }
+            Rule::and_test_expr => {
+                let mut iter = test.into_inner();
+                let left = self.emit_test_stmt(iter.next().unwrap())?;
+                let right = self.emit_test_stmt(iter.next().unwrap())?;
+                out.push(format!("({} && {})", left, right));
+            }
+            Rule::one_test_expr => out.push(self.emit_test_expr(test)?),
+            _ => unexpected!(test),
         }
-        Ok(out.join("\n"))
+        Ok(out.join(" "))
     }
 
     /// Single test expression. Use _stmt for expressions with OR / AND.
