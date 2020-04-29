@@ -42,23 +42,27 @@ something else in your `$PATH`.
 
 ## Status
 
-This project is in its infancy. It's currently focused on implementing
-all LDPL 4.4 statements, including C++ extension support. Once that's
-done, we'll move onto these four, higher level goals:
+This project is in its infancy, but can compile simple LDPL programs.
 
-1. Support the same `--flags` as the official compiler.
-2. Compile all LDPL 4.4 `examples/`.
-3. Pass all LDPL 4.4 [tests][ldpltest].
-4. Compile popular LDPL 4.4 [projects].
+Right now it supports all LDPL 4.4 statements and can run all the
+examples that shipped with LDPL 4.4.
 
-| **Status** | **Goal**      | **Comments** |
-| ---------- | ------------- | ------------ |
-| ✅         | `examples/`   | Done         |
-| 👷         | `ldpltests`   | In Progress  |
-| 👷         | `--flags`     | Mostly done  |
-| 🚧         | `GILD`        | Planned      |
-| 🚧         | `Lute`        | Planned      |
-| 🚧         | `ldpl-socket` | Planned      |
+User-defined statements and C++ Extensions statements are in progress.
+We also aim to pass all the [tests][ldpltest].
+
+These features are currently unsupported:
+
+- [ ] CREATE STATEMENT
+- [ ] Calling statements made with CREATE STATEMENt
+- [ ] INCLUDE
+- [ ] FLAG
+- [ ] EXTENSION
+- [ ] var IS EXTERNAL type
+- [ ] CALL EXTERNAL sub
+- [ ] CALL EXTERNAL sub WITH params...
+- [ ] EXTERNAL SUB-PROCEDURE definition
+- [ ] -i= cli flag
+- [ ] -f= cli flag
 
 ### [LDPLTest][ldpltest] Pass/Fail Status
 
