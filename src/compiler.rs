@@ -8,6 +8,9 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
+////
+// CONSTANTS
+
 /// Track indentation depth.
 static DEPTH: AtomicUsize = AtomicUsize::new(0);
 
@@ -27,6 +30,9 @@ const MAIN_FOOTER: &'static str = r#"
     return 0;
 }
 "#;
+
+////
+// DATA
 
 /// State of our LDPL program, including variables and defined
 /// sub-procedures. Eventually we'll move this into a Parser so we can
@@ -59,6 +65,9 @@ pub struct Compiler {
     // counter for tmp variables
     tmp_id: usize,
 }
+
+////
+// MACROS
 
 /// Call when an unexpected Pair/Rule is encountered.
 macro_rules! unexpected {
@@ -110,6 +119,9 @@ macro_rules! dedent {
     };
 }
 
+////
+// FUNCTIONS
+
 /// Turns parsed LDPL code into C++ code.
 pub fn compile(ast: Pairs<Rule>) -> LDPLResult<Compiler> {
     let mut compiler = Compiler::default();
@@ -117,6 +129,7 @@ pub fn compile(ast: Pairs<Rule>) -> LDPLResult<Compiler> {
     Ok(compiler)
 }
 
+/// Treating the compiler as a string produces the compiled C++.
 impl fmt::Display for Compiler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
