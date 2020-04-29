@@ -237,17 +237,21 @@ impl Compiler {
         let mut out = vec![];
 
         for def in pair.into_inner() {
-            assert!(def.as_rule() == Rule::type_def);
+            let is_extern = def.as_rule() == Rule::external_type_def;
 
             let mut parts = def.into_inner();
             let ident = parts.next().unwrap().as_str();
             let typename = parts.next().unwrap().as_str();
             let mut var = format!("{} {}", compile_type(typename), mangle_var(ident));
 
-            if typename == "number" {
-                var.push_str(" = 0");
-            } else if typename == "text" {
-                var.push_str(r#" = """#);
+            if is_extern {
+                var = format!("extern {}", var);
+            } else {
+                if typename == "number" {
+                    var.push_str(" = 0");
+                } else if typename == "text" {
+                    var.push_str(r#" = """#);
+                }
             }
 
             let varname = ident.to_string().to_uppercase();

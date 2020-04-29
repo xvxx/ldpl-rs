@@ -57,10 +57,11 @@ flag_stmt = {
 
 data_section = {
     ^"DATA:" ~ "\n"+
-    ~ (type_def ~ "\n"+)*
+    ~ ((type_def | external_type_def) ~ "\n"+)*
 }
 
-type_def = { ident ~ ^"IS" ~ ^"EXTERNAL"? ~ type_name }
+type_def = { ident ~ ^"IS" ~ type_name }
+external_type_def = { ident ~ ^"IS" ~ ^"EXTERNAL" ~ type_name }
 
 // Ident: person, something.with.dots, _, __INIT__, etc
 // https://docs.ldpl-lang.org/naming/
