@@ -348,7 +348,8 @@ impl Emitter {
     /// LABEL _
     fn emit_label_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         let label = pair.into_inner().next().unwrap();
-        emit!("label_{}:", mangle(label.as_str()))
+        // no indenting
+        Ok(format!("label_{}:\n", mangle(label.as_str())))
     }
 
     /// WAIT _ MILLISECONDS
@@ -641,14 +642,20 @@ impl Emitter {
     fn emit_for_each_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let ident = mangle_var(iter.next().unwrap().as_str());
-        let collection = self.emit_expr(iter.next().unwrap())?;
+        let collection = iter.next().unwrap();
 
         let range_var = format!("RVAR_{}", self.tmp_id);
         self.tmp_id += 1;
 
+        let method = if self.type_of_expr(collection.clone())?.is_map() {
+            ".second"
+        } else {
+            ""
+        };
+
         self.in_loop.push(true);
         indent!();
-        let mut body = vec![emit_line!("{} = {};", ident, range_var)];
+        let mut body = vec![emit_line!("{} = {}{};", ident, range_var, method)];
         for node in iter {
             body.push(self.emit_subproc_stmt(node)?);
         }
@@ -660,7 +667,7 @@ impl Emitter {
             emit_line!(
                 "for (auto& {} : {}.inner_collection) {{",
                 range_var,
-                collection
+                self.emit_expr(collection)?
             ),
             body.join(""),
             emit_line!("}")
