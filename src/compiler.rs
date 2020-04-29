@@ -335,20 +335,18 @@ impl Compiler {
     /// Function definition.
     fn compile_sub_def_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut params = String::new();
-        let mut name = String::new();
         let mut vars = String::new();
         let mut body: Vec<String> = vec![];
         let mut ident = "";
+        let mut is_extern = false;
 
         self.in_sub = true;
         self.locals.clear();
         indent!();
         for node in pair.into_inner() {
             match node.as_rule() {
-                Rule::ident => {
-                    ident = node.as_str();
-                    name = mangle_sub(ident);
-                }
+                Rule::external => is_extern = true,
+                Rule::ident => ident = node.as_str(),
                 Rule::sub_param_section => params = self.compile_params(node)?,
                 Rule::sub_data_section => vars = self.compile_data(node, true)?,
                 _ => body.push(self.compile_subproc_stmt(node)?),
@@ -357,15 +355,21 @@ impl Compiler {
         dedent!();
         self.in_sub = false;
 
-        if self.defs.contains_key(&name) {
+        if self.defs.contains_key(ident) {
             return error!("Redefining existing SUB-PROCEDURE: {}", ident);
         } else {
-            self.defs.insert(name.to_string(), true);
+            self.defs.insert(ident.to_string(), true);
         }
+
+        let mangled = if is_extern {
+            mangle_extern(ident)
+        } else {
+            mangle_sub(ident)
+        };
 
         emit!(
             "void {}({}) {{\n{}{}}}\n",
-            name,
+            mangled,
             params,
             vars,
             body.join(""),
@@ -523,7 +527,7 @@ impl Compiler {
         let mut iter = call_stmt.into_inner();
         let ident = iter.next().unwrap().as_str();
 
-        if !is_extern && !self.defs.contains_key(&mangle_sub(ident)) {
+        if !is_extern && !self.defs.contains_key(ident) {
             return error!(
                 "the subprocedure {} is called but never declared.",
                 ident.to_uppercase()

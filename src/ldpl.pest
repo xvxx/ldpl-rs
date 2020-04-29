@@ -134,7 +134,8 @@ create_stmt_stmt = { ^"CREATE" ~ ^"STATEMENT" ~ text ~ ^"EXECUTING" ~ ident }
 
 // sub-procedure aka function
 sub_def_stmt = {
-    (^"SUB-PROCEDURE" | ^"SUB")
+    external?
+    ~ (^"SUB-PROCEDURE" | ^"SUB")
     ~ ident
     ~ "\n"+
     ~ sub_param_section?
@@ -145,6 +146,7 @@ sub_def_stmt = {
     ~ "\n"*
     ~ (^"END SUB-PROCEDURE" | ^"END SUB")
 }
+external = { ^"EXTERNAL" }
 
 sub_param_section = {
     ^"PARAMETERS:" ~ "\n"+ ~ (type_def ~ "\n"+)+

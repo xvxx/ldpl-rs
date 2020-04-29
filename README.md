@@ -51,7 +51,7 @@ something else in your `$PATH`.
 
 This project is in its infancy, but can compile simple LDPL programs.
 
-Right now it supports all LDPL 4.4 statements and can run all the
+Right now it supports most LDPL 4.4 statements and can run all the
 examples that shipped with LDPL 4.4.
 
 User-defined statements and C++ Extensions statements are in progress.
@@ -61,7 +61,6 @@ These features are currently unsupported:
 
 - [ ] CREATE STATEMENT
 - [ ] Calling statements made with CREATE STATEMENT
-- [ ] EXTERNAL SUB-PROCEDURE definition
 - [ ] deeply nested collections (NUMBER LIST LIST LIST)
 - [ ] OF syntax (LIST OF NUMBERS)
 
