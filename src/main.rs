@@ -41,7 +41,7 @@ fn run() -> LDPLResult<()> {
     macro_rules! info {
         ($msg:expr) => {
             if !quiet {
-                println!("\x1b[93;1m*\x1b[0m {}", $msg);
+                println!("\x1b[95;1m*\x1b[0m {}", $msg);
             }
         };
         ($fmt:expr, $($args:expr),*) => {

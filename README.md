@@ -32,10 +32,15 @@ you have all those, installation is a breeze:
     make
 
 If that works, you've successfully built an `ldpl-rs` binary that you
-can use to run any of the official LDPL examples:
+can use to compile any of the official LDPL examples:
 
     git clone -b 4.4 git://github.com/lartu/ldpl
-    ldpl-rs examples/99bottles.ldpl
+    ./ldpl-rs ldpl/examples/99bottles.ldpl
+
+You can also use the "run" command to build and run a file in one go:
+
+    ./ldpl-rs run ldpl/examples/99bottles.ldpl
+    99 bottles of beer on the wall...
 
 To take it with you, just copy `ldpl-rs` to `/usr/local/bin` or
 something else in your `$PATH`.
