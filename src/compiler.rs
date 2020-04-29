@@ -55,6 +55,9 @@ pub struct Compiler {
     /// Add with `add_extension()`.
     pub exts: Vec<String>,
 
+    /// Compiler flags to build with.
+    pub flags: Vec<String>,
+
     /// Global variables defined in the DATA: section. Used for error
     /// checking.
     globals: HashMap<String, LDPLType>,
@@ -174,6 +177,18 @@ impl fmt::Display for Compiler {
 }
 
 impl Compiler {
+    /// Add a C++ file to include when building.
+    pub fn add_extension(&mut self, ext_file: String) -> LDPLResult<()> {
+        self.exts.push(ext_file);
+        Ok(())
+    }
+
+    /// Add a C++ flag to include when building.
+    pub fn add_flag(&mut self, flag: String) -> LDPLResult<()> {
+        self.flags.push(flag);
+        Ok(())
+    }
+
     /// Load a file from disk, parse it, and generate C++ code.
     pub fn load_and_compile(&mut self, path: &str) -> LDPLResult<()> {
         // info!("Loading {}", path);
@@ -181,11 +196,6 @@ impl Compiler {
             std::fs::read_to_string(&path).map_err(|err| Err(format!("{}: {}", path, err)))?;
         // info!("Parsing {}", path);
         self.compile(&source)
-    }
-
-    pub fn add_extension(&mut self, path: String) -> LDPLResult<()> {
-        self.exts.push(path);
-        Ok(())
     }
 
     /// Turns a string of LDPL code into C++ code.
@@ -251,8 +261,11 @@ impl Compiler {
                 let ext_file = unquote(stmt.into_inner().next().unwrap().as_str());
                 self.add_extension(ext_file.into())?;
             }
+            Rule::flag_stmt => {
+                let flag = unquote(stmt.into_inner().next().unwrap().as_str());
+                self.add_flag(flag.into())?;
+            }
             Rule::using_stmt => todo!(),
-            Rule::flag_stmt => todo!(),
             _ => unexpected!(stmt),
         }
         Ok(())

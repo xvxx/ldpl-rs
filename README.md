@@ -60,11 +60,8 @@ We also aim to pass all the [tests][ldpltest].
 These features are currently unsupported:
 
 - [ ] CREATE STATEMENT
-- [ ] Calling statements made with CREATE STATEMENt
-- [ ] FLAG
-- [ ] EXTENSION
+- [ ] Calling statements made with CREATE STATEMENT
 - [ ] EXTERNAL SUB-PROCEDURE definition
-- [ ] -f= cli flag
 - [ ] deeply nested collections (NUMBER LIST LIST LIST)
 - [ ] OF syntax (LIST OF NUMBERS)
 

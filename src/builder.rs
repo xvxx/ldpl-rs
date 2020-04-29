@@ -38,10 +38,11 @@ impl Compiler {
             .arg("-o")
             .arg(&target);
 
-        if !self.exts.is_empty() {
-            for ext in &self.exts {
-                cmd = cmd.arg(ext);
-            }
+        for flag in &self.flags {
+            cmd = cmd.arg(flag);
+        }
+        for ext in &self.exts {
+            cmd = cmd.arg(ext);
         }
 
         // run command

@@ -59,6 +59,7 @@ fn run() -> LDPLResult<()> {
     let mut outfile = None;
     let mut includes = vec![];
     let mut ext_includes = vec![];
+    let mut ext_flags = vec![];
     let mut stdin = String::new();
 
     // split args on = so -o=file is the same as -o file
@@ -93,6 +94,9 @@ fn run() -> LDPLResult<()> {
                 outfile = Some(args.remove(0));
             }
             "-i" => {
+                if args.is_empty() {
+                    error!("filename to include expected.");
+                }
                 let file = args.remove(0);
                 if file.ends_with(".ldpl") || file.ends_with(".lsc") {
                     includes.push(file);
@@ -100,7 +104,12 @@ fn run() -> LDPLResult<()> {
                     ext_includes.push(file);
                 }
             }
-            "-f" => todo!(),
+            "-f" => {
+                if args.is_empty() {
+                    error!("flag expected.");
+                }
+                ext_flags.push(args.remove(0));
+            }
             "-c" => {
                 if let Err(error) = io::stdin().read_to_string(&mut stdin) {
                     error!("Error reading STDIN: {}", error);
@@ -130,10 +139,11 @@ fn run() -> LDPLResult<()> {
             compiler.load_and_compile(&file)?;
         }
     }
-    if !ext_includes.is_empty() {
-        for ext in ext_includes {
-            compiler.add_extension(ext)?;
-        }
+    for flag in ext_flags {
+        compiler.add_flag(flag)?;
+    }
+    for ext in ext_includes {
+        compiler.add_extension(ext)?;
     }
     if stdin.is_empty() {
         compiler.load_and_compile(&file)?;
