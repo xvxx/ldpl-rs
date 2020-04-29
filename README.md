@@ -68,6 +68,8 @@ These features are currently unsupported:
 - [ ] EXTERNAL SUB-PROCEDURE definition
 - [ ] -i= cli flag
 - [ ] -f= cli flag
+- [ ] deeply nested collections (NUMBER LIST LIST LIST)
+- [ ] OF syntax (LIST OF NUMBERS)
 
 ### [LDPLTest][ldpltest] Pass/Fail Status
 
