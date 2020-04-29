@@ -145,14 +145,14 @@ fn run() -> LDPLResult<()> {
     };
 
     info!("Compiling {}", bin);
-    let cpp = emitter::emit(ast)?;
+    let emitter = emitter::emit(ast)?;
     if command == "emit" {
-        println!("{}", cpp);
+        println!("{}", emitter);
         return Ok(());
     }
 
     info!("Building {}", bin);
-    compiler::compile(&cpp, Some(&bin))?;
+    compiler::compile(&emitter.to_string(), Some(&bin))?;
     info!("Saved as {}", bin);
     success!("File(s) compiled successfully.");
 

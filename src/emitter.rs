@@ -4,13 +4,14 @@ use crate::{parser::Rule, LDPLResult, LDPLType};
 use pest::iterators::{Pair, Pairs};
 use std::{
     collections::HashMap,
+    fmt,
     sync::atomic::{AtomicUsize, Ordering},
 };
 
 /// Track indentation depth.
 static DEPTH: AtomicUsize = AtomicUsize::new(0);
 
-/// Include common C++ functions in our program.
+/// Include LDPL C++ internal functions in our output.
 const CPP_HEADER: &'static str = include_str!("../lib/ldpl_header.cpp");
 
 /// Setup the C++ main() function
@@ -30,14 +31,31 @@ const MAIN_FOOTER: &'static str = r#"
 /// State of our LDPL program, including variables and defined
 /// sub-procedures. Eventually we'll move this into a Parser so we can
 /// have multiple emitters (for different languages).
+#[derive(Default)]
 pub struct Emitter {
+    /// Body of the the main() function. _HEADER and _FOOTER get
+    /// inserted automatically when we're done.
+    pub main: Vec<String>,
+
+    /// Sub-procedure definitions.
+    pub subs: Vec<String>,
+
+    /// Global variable declarations.
+    pub vars: Vec<String>,
+
+    /// Global variables defined in the DATA: section. Used for error
+    /// checking.
     globals: HashMap<String, LDPLType>,
+
+    /// Local variables, re-defined for each sub-procedure.
     locals: HashMap<String, LDPLType>,
 
     // in a sub-procedure? RETURN doesn't work outside of one.
     in_sub: bool,
+
     // in a loop? BREAK/CONTINUE only work in loops. Vec for nesting.
     in_loop: Vec<bool>,
+
     // counter for tmp variables
     tmp_id: usize,
 }
@@ -92,47 +110,69 @@ macro_rules! dedent {
     };
 }
 
-/// Turns parsed LDPL code into a string of C++ code.
-pub fn emit(ast: Pairs<Rule>) -> LDPLResult<String> {
-    let mut emitter = Emitter {
-        globals: HashMap::default(),
-        locals: HashMap::default(),
-        in_loop: vec![],
-        in_sub: false,
-        tmp_id: 0,
-    };
-    emitter.emit(ast)
+/// Turns parsed LDPL code into C++ code.
+pub fn emit(ast: Pairs<Rule>) -> LDPLResult<Emitter> {
+    let mut emitter = Emitter::default();
+    emitter.emit(ast)?;
+    Ok(emitter)
+}
+
+impl fmt::Display for Emitter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}\n{}\n{}\n{}{}{}",
+            CPP_HEADER,
+            self.vars.join("\n"),
+            self.subs.join("\n"),
+            MAIN_HEADER,
+            self.main.join("\n"),
+            MAIN_FOOTER
+        )
+    }
 }
 
 impl Emitter {
-    /// Turns parsed LDPL code into a string of C++ code.
-    pub fn emit(&mut self, ast: Pairs<Rule>) -> LDPLResult<String> {
-        let mut out = vec![CPP_HEADER.to_string()];
-        let mut main = MAIN_HEADER.to_string();
-
+    /// Turns parsed LDPL code into C++ code.
+    pub fn emit(&mut self, ast: Pairs<Rule>) -> LDPLResult<()> {
         // Predeclared vars
-        self.globals
-            .insert("ARGV".into(), LDPLType::List(Box::new(LDPLType::Text)));
+        if self.globals.is_empty() {
+            self.globals
+                .insert("ARGV".into(), LDPLType::List(Box::new(LDPLType::Text)));
+        }
 
         for pair in ast {
             match pair.as_rule() {
-                Rule::cpp_ext_stmt => todo!(),
-                Rule::data_section => out.push(self.emit_data(pair, false)?),
-                Rule::create_stmt_stmt => todo!(),
-                Rule::sub_def_stmt => out.push(self.emit_sub_def_stmt(pair)?),
-                Rule::EOI => break,
-                _ => {
-                    indent!();
-                    main.push_str(&self.emit_subproc_stmt(pair)?);
-                    dedent!();
+                Rule::header_stmt => todo!(),
+                Rule::data_section => {
+                    let data = self.emit_data(pair, false)?;
+                    self.vars.push(data);
                 }
+                Rule::EOI => break,
+
+                Rule::procedure_section => {
+                    for proc_stmt in pair.into_inner() {
+                        match proc_stmt.as_rule() {
+                            Rule::create_stmt_stmt => todo!(),
+                            Rule::sub_def_stmt => {
+                                let sub = self.emit_sub_def_stmt(proc_stmt)?;
+                                self.subs.push(sub);
+                            }
+                            _ => {
+                                indent!();
+                                let stmt = self.emit_subproc_stmt(proc_stmt)?;
+                                self.main.push(stmt);
+                                dedent!();
+                            }
+                        }
+                    }
+                }
+
+                _ => unexpected!(pair),
             }
         }
 
-        main.push_str(MAIN_FOOTER);
-        out.push(main);
-
-        Ok(out.join(""))
+        Ok(())
     }
 
     /// Convert `name IS TEXT` into a C++ variable declaration.

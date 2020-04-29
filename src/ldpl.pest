@@ -21,7 +21,7 @@ COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 program = _{
     SOI                         // start of input
     ~ "\n"*
-    ~ (cpp_ext_stmt ~ "\n"+)*
+    ~ (header_stmt ~ "\n"+)*
     ~ "\n"*
     ~ data_section?
     ~ "\n"*
@@ -34,7 +34,7 @@ program = _{
 // C++ EXTENSION
 //
 
-cpp_ext_stmt = {
+header_stmt = {
     include_stmt | using_stmt | extension_stmt
 }
 include_stmt = {
@@ -82,7 +82,7 @@ type_name = {
 // PROCEDURE:
 //
 
-procedure_section = _{
+procedure_section = {
     ^"PROCEDURE:" ~ "\n"+
     ~ (proc_stmt ~ "\n"+)*
     ~ proc_stmt?
