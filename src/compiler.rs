@@ -139,6 +139,11 @@ pub fn load_and_compile(path: &str) -> LDPLResult<Compiler> {
     Ok(compiler)
 }
 
+/// Create a fresh compiler.
+pub fn new() -> Compiler {
+    Compiler::default()
+}
+
 /// Treating the compiler as a string produces the compiled C++.
 impl fmt::Display for Compiler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

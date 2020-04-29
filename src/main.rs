@@ -1,9 +1,4 @@
-use ldpl::{
-    builder, compiler,
-    parser::{LDPLParser, Parser, Rule},
-    LDPLResult,
-};
-use pest::iterators::Pairs;
+use ldpl::{builder, compiler, LDPLResult};
 use std::{
     path::Path,
     process::{Command, Stdio},
@@ -60,7 +55,7 @@ fn run() -> LDPLResult<()> {
     }
 
     let mut command = DEFAULT_COMMAND;
-    let mut path = String::new();
+    let mut file = String::new();
     let mut bin = String::new();
 
     // split args on = so -o=file is the same as -o file
@@ -75,6 +70,7 @@ fn run() -> LDPLResult<()> {
         }
     }
     let mut args = new_args;
+    let mut includes = vec![];
 
     while !args.is_empty() {
         let arg = args.remove(0);
@@ -94,40 +90,25 @@ fn run() -> LDPLResult<()> {
                 }
                 bin = args.remove(0);
             }
-            "-i" | "-f" | "-c" => todo!(),
-            "parse" => command = "parse",
-            "check" => command = "check",
+            "-i" => includes.push(args.remove(0)),
+            "-f" | "-c" => todo!(),
             "build" => command = "build",
             "run" => command = "run",
             _ if arg.starts_with('-') => error!("Unknown flag {}", arg),
-            _ => path = arg,
+            _ => file = arg,
         }
     }
 
     quiet = command != "build";
 
-    if path.is_empty() && !args.is_empty() {
-        path = args.remove(0);
-    } else if path.is_empty() {
+    if file.is_empty() && !args.is_empty() {
+        file = args.remove(0);
+    } else if file.is_empty() {
         error!("filename expected.");
     }
 
-    info!("Loading {}", path);
-    let source = std::fs::read_to_string(&path)?;
-
-    info!("Parsing {}", path);
-    let ast = LDPLParser::parse(Rule::program, &source)
-        .unwrap_or_else(|e| error!(format!("{} failed to parse.\n\x1b[0m{}", path, e)));
-    if command == "parse" {
-        print_ast(ast);
-        return Ok(());
-    }
-
-    if command == "check" {
-        todo!();
-    }
-
-    let path = Path::new(&path);
+    info!("Loading {}", file);
+    let path = Path::new(&file);
     let bin = if bin.is_empty() {
         format!(
             "{}/{}",
@@ -145,8 +126,15 @@ fn run() -> LDPLResult<()> {
     };
 
     info!("Compiling {}", bin);
-    let compiler = compiler::compile(ast)?;
-    if command == "compiler" {
+    let mut compiler = compiler::new();
+    if !includes.is_empty() {
+        for file in includes {
+            compiler.load_and_compile(&file)?;
+        }
+    }
+    compiler.load_and_compile(&file)?;
+
+    if command == "print" {
         println!("{}", compiler);
         return Ok(());
     }
@@ -173,16 +161,6 @@ fn run() -> LDPLResult<()> {
     Ok(())
 }
 
-/// Print parsed AST
-fn print_ast(ast: Pairs<Rule>) {
-    for pair in ast {
-        // A pair is a combination of the rule which matched and a span of input
-        println!("Rule:    {:?}", pair.as_rule());
-        println!("Span:    {:?}", pair.as_span());
-        println!("Text:    {}", pair.as_str());
-    }
-}
-
 fn print_version() {
     println!(
         "ldpl-rs v{version} ({built})",
@@ -204,8 +182,6 @@ fn print_usage() {
     print!("\x1b[95;1mCommands:\x1b[0m");
     println!(
         r#"
-    parse       Parse and print syntax tree.
-    check       Check for errors only.
     print       Print compiled C++ code. (same as -r)
     build       Compile binary. (default)
     run         Run binary after building.
