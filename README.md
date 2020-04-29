@@ -64,8 +64,6 @@ These features are currently unsupported:
 - [ ] FLAG
 - [ ] EXTENSION
 - [ ] var IS EXTERNAL type
-- [ ] CALL EXTERNAL sub
-- [ ] CALL EXTERNAL sub WITH params...
 - [ ] EXTERNAL SUB-PROCEDURE definition
 - [ ] -f= cli flag
 - [ ] deeply nested collections (NUMBER LIST LIST LIST)

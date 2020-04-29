@@ -21,8 +21,7 @@ static DEPTH: AtomicUsize = AtomicUsize::new(0);
 const CPP_HEADER: &'static str = include_str!("../lib/ldpl_header.cpp");
 
 /// Setup the C++ main() function
-const MAIN_HEADER: &'static str = r#"
-ldpl_list<chText> VAR_ARGV;
+const MAIN_HEADER: &'static str = r#"ldpl_list<chText> VAR_ARGV;
 
 int main(int argc, char* argv[]) {
     cout.precision(numeric_limits<ldpl_number>::digits10);
@@ -58,6 +57,9 @@ pub struct Compiler {
 
     /// Local variables, re-defined for each sub-procedure.
     locals: HashMap<String, LDPLType>,
+
+    /// Sub definitions.
+    defs: HashMap<String, bool>,
 
     // in a sub-procedure? RETURN doesn't work outside of one.
     in_sub: bool,
@@ -149,12 +151,12 @@ impl fmt::Display for Compiler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}\n{}\n{}\n{}{}{}",
+            "{}{}{}{}{}{}",
             CPP_HEADER,
             self.vars.join("\n"),
             self.subs.join("\n"),
             MAIN_HEADER,
-            self.main.join("\n"),
+            self.main.join(""),
             MAIN_FOOTER
         )
     }
@@ -300,13 +302,17 @@ impl Compiler {
         let mut name = String::new();
         let mut vars = String::new();
         let mut body: Vec<String> = vec![];
+        let mut ident = "";
 
         self.in_sub = true;
         self.locals.clear();
         indent!();
         for node in pair.into_inner() {
             match node.as_rule() {
-                Rule::ident => name = mangle_sub(node.as_str()),
+                Rule::ident => {
+                    ident = node.as_str();
+                    name = mangle_sub(ident);
+                }
                 Rule::sub_param_section => params = self.compile_params(node)?,
                 Rule::sub_data_section => vars = self.compile_data(node, true)?,
                 _ => body.push(self.compile_subproc_stmt(node)?),
@@ -314,6 +320,12 @@ impl Compiler {
         }
         dedent!();
         self.in_sub = false;
+
+        if self.defs.contains_key(&name) {
+            return error!("Redefining existing SUB-PROCEDURE: {}", ident);
+        } else {
+            self.defs.insert(name.to_string(), true);
+        }
 
         emit!(
             "void {}({}) {{\n{}{}}}\n",
@@ -470,45 +482,58 @@ impl Compiler {
 
     /// CALL _ WITH _ ...
     fn compile_call_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
-        let mut iter = pair.into_inner();
-        let ident = iter.next().unwrap();
+        let call_stmt = pair.into_inner().next().unwrap();
+        let is_extern = call_stmt.as_rule() == Rule::call_external_stmt;
+        let mut iter = call_stmt.into_inner();
+        let ident = iter.next().unwrap().as_str();
+
+        if !is_extern && !self.defs.contains_key(&mangle_sub(ident)) {
+            return error!(
+                "the subprocedure {} is called but never declared.",
+                ident.to_uppercase()
+            );
+        }
 
         let mut prefix = vec![];
-
         let mut params = vec![];
-        if let Some(expr_list) = iter.next() {
-            for param in expr_list.into_inner() {
-                match param.as_rule() {
-                    Rule::number => {
-                        let var = format!("LPVAR_{}", self.tmp_id);
-                        prefix.push(emit_line!(
-                            "ldpl_number {} = {};",
-                            var,
-                            self.compile_expr(param)?
-                        ));
-                        params.push(var);
-                        self.tmp_id += 1;
-                    }
-                    Rule::text | Rule::linefeed => {
-                        let var = format!("LPVAR_{}", self.tmp_id);
-                        prefix.push(emit_line!(
-                            "chText {} = {};",
-                            var,
-                            self.compile_expr(param)?
-                        ));
-                        params.push(var);
-                        self.tmp_id += 1;
-                    }
-                    Rule::var => params.push(self.compile_expr(param)?),
-                    _ => unexpected!(param),
+
+        while let Some(param) = iter.next() {
+            match param.as_rule() {
+                Rule::number => {
+                    let var = format!("LPVAR_{}", self.tmp_id);
+                    self.tmp_id += 1;
+                    prefix.push(emit_line!(
+                        "ldpl_number {} = {};",
+                        var,
+                        self.compile_expr(param)?
+                    ));
+                    params.push(var);
                 }
+                Rule::text | Rule::linefeed => {
+                    let var = format!("LPVAR_{}", self.tmp_id);
+                    self.tmp_id += 1;
+                    prefix.push(emit_line!(
+                        "chText {} = {};",
+                        var,
+                        self.compile_expr(param)?
+                    ));
+                    params.push(var);
+                }
+                Rule::var => params.push(self.compile_expr(param)?),
+                _ => unexpected!(param),
             }
         }
+
+        let mangled = if is_extern {
+            mangle_extern(ident)
+        } else {
+            mangle_sub(ident)
+        };
 
         Ok(format!(
             "{}{}",
             prefix.join(""),
-            emit_line!("{}({});", mangle_sub(ident.as_str()), params.join(", "))
+            emit_line!("{}({});", mangled, params.join(", "))
         ))
     }
 
@@ -1204,7 +1229,7 @@ fn mangle(ident: &str) -> String {
     let mut mangled = String::with_capacity(ident.len() + 10);
 
     for c in ident.to_uppercase().chars() {
-        if c.is_alphanumeric() {
+        if c.is_alphanumeric() || c == '_' {
             mangled.push(c);
         } else {
             mangled.push_str(&format!("c{}_", c as u16));
@@ -1212,4 +1237,20 @@ fn mangle(ident: &str) -> String {
     }
 
     mangled
+}
+
+/// External functions have simpler conversion rules.
+/// http://docs.ldpl-lang.org/naming/#external-identifier-naming-schemes
+fn mangle_extern(ident: &str) -> String {
+    let mut mangled = String::with_capacity(ident.len() + 10);
+
+    for c in ident.to_uppercase().chars() {
+        if c.is_alphanumeric() || c == '_' {
+            mangled.push(c);
+        } else {
+            mangled.push('_');
+        }
+    }
+
+    mangled.to_uppercase()
 }
