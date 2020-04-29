@@ -1,5 +1,5 @@
 use ldpl::{
-    builder, emitter,
+    builder, compiler,
     parser::{LDPLParser, Parser, Rule},
     LDPLResult,
 };
@@ -87,7 +87,7 @@ fn run() -> LDPLResult<()> {
                 print_version();
                 return Ok(());
             }
-            "emit" | "-r" => command = "emit",
+            "print" | "-r" => command = "print",
             "-o" => {
                 if args.is_empty() {
                     error!("binary name expected.");
@@ -145,14 +145,14 @@ fn run() -> LDPLResult<()> {
     };
 
     info!("Compiling {}", bin);
-    let emitter = emitter::emit(ast)?;
-    if command == "emit" {
-        println!("{}", emitter);
+    let compiler = compiler::compile(ast)?;
+    if command == "compiler" {
+        println!("{}", compiler);
         return Ok(());
     }
 
     info!("Building {}", bin);
-    builder::build(&emitter.to_string(), Some(&bin))?;
+    builder::build(&compiler.to_string(), Some(&bin))?;
     info!("Saved as {}", bin);
     success!("File(s) compiled successfully.");
 
@@ -206,7 +206,7 @@ fn print_usage() {
         r#"
     parse       Parse and print syntax tree.
     check       Check for errors only.
-    emit        Print C++ code. (same as -r)
+    print       Print compiled C++ code. (same as -r)
     build       Compile binary. (default)
     run         Run binary after building.
 "#

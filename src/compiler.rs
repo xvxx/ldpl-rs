@@ -1,4 +1,4 @@
-//! The Emitter generates a String of C++ code from parsed LDPL code.
+//! The Compiler generates a String of C++ code from parsed LDPL code.
 
 use crate::{parser::Rule, LDPLResult, LDPLType};
 use pest::iterators::{Pair, Pairs};
@@ -32,7 +32,7 @@ const MAIN_FOOTER: &'static str = r#"
 /// sub-procedures. Eventually we'll move this into a Parser so we can
 /// have multiple emitters (for different languages).
 #[derive(Default)]
-pub struct Emitter {
+pub struct Compiler {
     /// Body of the the main() function. _HEADER and _FOOTER get
     /// inserted automatically when we're done.
     pub main: Vec<String>,
@@ -111,13 +111,13 @@ macro_rules! dedent {
 }
 
 /// Turns parsed LDPL code into C++ code.
-pub fn emit(ast: Pairs<Rule>) -> LDPLResult<Emitter> {
-    let mut emitter = Emitter::default();
-    emitter.emit(ast)?;
-    Ok(emitter)
+pub fn compile(ast: Pairs<Rule>) -> LDPLResult<Compiler> {
+    let mut compiler = Compiler::default();
+    compiler.compile(ast)?;
+    Ok(compiler)
 }
 
-impl fmt::Display for Emitter {
+impl fmt::Display for Compiler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -132,9 +132,9 @@ impl fmt::Display for Emitter {
     }
 }
 
-impl Emitter {
+impl Compiler {
     /// Turns parsed LDPL code into C++ code.
-    pub fn emit(&mut self, ast: Pairs<Rule>) -> LDPLResult<()> {
+    pub fn compile(&mut self, ast: Pairs<Rule>) -> LDPLResult<()> {
         // Predeclared vars
         if self.globals.is_empty() {
             self.globals
@@ -1069,7 +1069,7 @@ impl Emitter {
 ////
 // HELPERS
 
-impl Emitter {
+impl Compiler {
     /// Find the type for an expression.
     fn type_of_expr(&self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
         match expr.as_rule() {
