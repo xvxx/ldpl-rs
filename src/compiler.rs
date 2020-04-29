@@ -178,6 +178,8 @@ impl Compiler {
         if self.globals.is_empty() {
             self.globals
                 .insert("ARGV".into(), LDPLType::List(Box::new(LDPLType::Text)));
+            self.globals.insert("ERRORCODE".into(), LDPLType::Number);
+            self.globals.insert("ERRORTEXT".into(), LDPLType::Text);
         }
 
         for pair in ast {
