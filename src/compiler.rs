@@ -127,17 +127,17 @@ macro_rules! dedent {
 ////
 // FUNCTIONS
 
-/// Turns parsed LDPL code into C++ code.
-pub fn compile(ast: Pairs<Rule>) -> LDPLResult<Compiler> {
+/// Turns a string of LDPL code into C++ code.
+pub fn compile(code: &str) -> LDPLResult<Compiler> {
     let mut compiler = Compiler::default();
-    compiler.compile(ast)?;
+    compiler.compile(code)?;
     Ok(compiler)
 }
 
-/// Turns a string of LDPL code into C++ code.
-pub fn compile_str(code: &str) -> LDPLResult<Compiler> {
+/// Turns parsed LDPL code into C++ code.
+pub fn compile_ast(ast: Pairs<Rule>) -> LDPLResult<Compiler> {
     let mut compiler = Compiler::default();
-    compiler.compile_str(code)?;
+    compiler.compile_ast(ast)?;
     Ok(compiler)
 }
 
@@ -176,17 +176,17 @@ impl Compiler {
         let source =
             std::fs::read_to_string(&path).map_err(|err| Err(format!("{}: {}", path, err)))?;
         // info!("Parsing {}", path);
-        self.compile_str(&source)
+        self.compile(&source)
     }
 
     /// Turns a string of LDPL code into C++ code.
-    pub fn compile_str(&mut self, source: &str) -> LDPLResult<()> {
+    pub fn compile(&mut self, source: &str) -> LDPLResult<()> {
         let ast = LDPLParser::parse(Rule::program, &source)?;
-        self.compile(ast)
+        self.compile_ast(ast)
     }
 
     /// Turns parsed LDPL code into C++ code.
-    pub fn compile(&mut self, ast: Pairs<Rule>) -> LDPLResult<()> {
+    pub fn compile_ast(&mut self, ast: Pairs<Rule>) -> LDPLResult<()> {
         // Predeclared vars
         if self.globals.is_empty() {
             self.globals

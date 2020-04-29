@@ -125,7 +125,7 @@ fn run() -> LDPLResult<()> {
     if stdin.is_empty() {
         compiler.load_and_compile(&file)?;
     } else {
-        compiler.compile_str(&stdin)?;
+        compiler.compile(&stdin)?;
     }
 
     if command == "print" {
