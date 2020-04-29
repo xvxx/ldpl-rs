@@ -23,9 +23,11 @@ just fine with regular LDPL extensions.
 
 ## Building It
 
-LDPL-RS requires **make**, [**cargo**][rustup], [**Rust**][rustup],
-[**git**][git], and a [**C++ compiler**][cpp-compiler] to build. Once
-you have all those, installation is a breeze:
+LDPL-RS requires **make**, [**cargo**][rustup], and [**Rust**][rustup]
+to build. Once you've built the `ldpl-rs` binary, you will need a
+[**C++ compiler**][cpp-compiler] to build LDPL programs.
+
+Once you've got all that, building is a breeze:
 
     git clone git://github.com/xvxx/ldpl-rs
     cd ldpl-rs
@@ -59,19 +61,17 @@ These features are currently unsupported:
 
 - [ ] CREATE STATEMENT
 - [ ] Calling statements made with CREATE STATEMENt
-- [ ] INCLUDE
 - [ ] FLAG
 - [ ] EXTENSION
 - [ ] var IS EXTERNAL type
 - [ ] CALL EXTERNAL sub
 - [ ] CALL EXTERNAL sub WITH params...
 - [ ] EXTERNAL SUB-PROCEDURE definition
-- [ ] -i= cli flag
 - [ ] -f= cli flag
 - [ ] deeply nested collections (NUMBER LIST LIST LIST)
 - [ ] OF syntax (LIST OF NUMBERS)
 
-### [LDPLTest][ldpltest] Pass/Fail Status
+## [LDPLTest][ldpltest] Pass/Fail Status
 
 | **Test** | **Status** | **Failure Reason** |
 | -------- | ---------- | ------------------ |
@@ -88,7 +88,7 @@ These features are currently unsupported:
 | sqrt     | ✅         |                    |
 | vector   | ✅         |                    |
 
-### [LDPL Examples][examples] Pass/Fail Status
+## [LDPL Examples][examples] Pass/Fail Status
 
 | **Example**         | **Status** | **Failure Reason** |
 | ------------------- | ---------- | ------------------ |
