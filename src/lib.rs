@@ -3,7 +3,7 @@ extern crate pest_derive;
 
 #[macro_use]
 pub mod error;
-pub mod compiler;
+pub mod builder;
 pub mod emitter;
 pub mod parser;
 mod types;

@@ -1,5 +1,5 @@
 use ldpl::{
-    compiler, emitter,
+    builder, emitter,
     parser::{LDPLParser, Parser, Rule},
     LDPLResult,
 };
@@ -152,7 +152,7 @@ fn run() -> LDPLResult<()> {
     }
 
     info!("Building {}", bin);
-    compiler::compile(&emitter.to_string(), Some(&bin))?;
+    builder::build(&emitter.to_string(), Some(&bin))?;
     info!("Saved as {}", bin);
     success!("File(s) compiled successfully.");
 

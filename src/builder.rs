@@ -1,15 +1,10 @@
-//! The Compiler wraps your C++ compiler and builds it.
+//! The Builder wraps your C++ compiler and builds the final program.
 
 use crate::LDPLResult;
-use std::{
-    fs,
-    path::Path,
-    process::Command,
-    str,
-};
+use std::{fs, path::Path, process::Command, str};
 
-/// Runs the local C++ compiler and builds a binary.
-pub fn compile(cpp_code: &str, outfile: Option<&str>) -> LDPLResult<()> {
+/// Run the local C++ compiler and build a binary.
+pub fn build(cpp_code: &str, outfile: Option<&str>) -> LDPLResult<()> {
     let filename = "ldpl-temp.cpp";
     if Path::new(filename).exists() {
         fs::remove_file(filename)?;
