@@ -68,6 +68,9 @@ pub struct Compiler {
     /// Sub definitions.
     defs: HashMap<String, bool>,
 
+    /// User-defined statements created with CREATE STATEMENT
+    user_stmts: HashMap<String, String>,
+
     // in a sub-procedure? RETURN doesn't work outside of one.
     in_sub: bool,
 
@@ -226,7 +229,7 @@ impl Compiler {
                 Rule::procedure_section => {
                     for proc_stmt in pair.into_inner() {
                         match proc_stmt.as_rule() {
-                            Rule::create_stmt_stmt => todo!(),
+                            Rule::create_stmt_stmt => self.add_user_stmt(proc_stmt)?,
                             Rule::sub_def_stmt => {
                                 let sub = self.compile_sub_def_stmt(proc_stmt)?;
                                 self.subs.push(sub);
@@ -376,6 +379,57 @@ impl Compiler {
         )
     }
 
+    /// Read CREATE STATEMENT and add mapping as a user_stmt
+    /// CREATE STATEMENT <text> EXECUTING <ident>
+    fn add_user_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<()> {
+        let mut iter = pair.into_inner();
+        let stmt = unquote(iter.next().unwrap().as_str());
+        let ident = iter.next().unwrap().as_str();
+
+        if self.user_stmts.contains_key(stmt) {
+            return error!("Statement can't be re-defined: {}", stmt);
+        }
+
+        self.user_stmts
+            .insert(stmt.to_string(), mangle_sub(ident).to_string());
+
+        Ok(())
+    }
+
+    /// Translate a user-defined STATEMENT into a SUB call.
+    fn compile_user_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
+        let stmt = pair.as_str();
+        let call_parts: Vec<_> = stmt.split(" ").collect();
+        let mut args = vec![];
+
+        'outer: for (pattern, sub) in &self.user_stmts {
+            let mut def_parts: Vec<_> = pattern.split(" ").collect();
+
+            // don't bother if the patterns aren't the same length
+            if def_parts.len() != call_parts.len() {
+                continue;
+            }
+
+            // compare each word in the pattern
+            for call_part in &call_parts {
+                let def_part = def_parts.remove(0); // safe - we checked size
+                if def_part == "$" {
+                    args.push(call_part);
+                } else if *call_part != def_part {
+                    continue 'outer;
+                }
+            }
+
+            // if we got here, we found a match
+            if !args.is_empty() {
+                todo!();
+            }
+            return emit!("{}();", sub);
+        }
+
+        error!("Unknown statement: {}", stmt)
+    }
+
     /// Emit a stmt from the PROCEDURE: section of a file or function.
     fn compile_subproc_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut out = vec![];
@@ -438,8 +492,9 @@ impl Compiler {
             Rule::accept_stmt => self.compile_accept_stmt(pair)?,
             Rule::execute_stmt => self.compile_execute_stmt(pair)?,
 
-            // create statement
-            Rule::user_stmt => unexpected!(pair),
+            // user-defined statement (made via CREATE STATEMENT)
+            Rule::user_stmt => self.compile_user_stmt(pair)?,
+
             _ => unexpected!(pair),
         });
 
