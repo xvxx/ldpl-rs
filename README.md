@@ -111,6 +111,16 @@ These features are currently unsupported:
 | sqrt.ldpl           | ✅         |                    |
 | strcmp-demo.ldpl    | ✅         |                    |
 
+## License
+
+The LDPL-RS Compiler is distributed under the Apache 2.0 License, same
+as the official LDPL compiler. All LDPL Dinosaur logos where created
+by [Lartu](https://github.com/Lartu) and are released under a Creative
+Commons Attribution 4.0 International (CC BY 4.0) license.
+
+Portions of LDPL-RS are copied directly from LDPL. Thank you to the
+LDPL community for all their contributions!
+
 [ldpl]: https://www.ldpl-lang.org/
 [ldpl-repo]: https://www.ldpl-lang.org/
 [ldpl-docs]: http://docs.ldpl-lang.org/
