@@ -63,7 +63,6 @@ These features are currently unsupported:
 - [ ] Calling statements made with CREATE STATEMENt
 - [ ] FLAG
 - [ ] EXTENSION
-- [ ] var IS EXTERNAL type
 - [ ] EXTERNAL SUB-PROCEDURE definition
 - [ ] -f= cli flag
 - [ ] deeply nested collections (NUMBER LIST LIST LIST)

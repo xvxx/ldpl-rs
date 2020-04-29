@@ -134,6 +134,13 @@ pub fn compile(ast: Pairs<Rule>) -> LDPLResult<Compiler> {
     Ok(compiler)
 }
 
+/// Turns a string of LDPL code into C++ code.
+pub fn compile_str(code: &str) -> LDPLResult<Compiler> {
+    let mut compiler = Compiler::default();
+    compiler.compile_str(code)?;
+    Ok(compiler)
+}
+
 /// Turns LDPL code on disk into C++ code.
 pub fn load_and_compile(path: &str) -> LDPLResult<Compiler> {
     let mut compiler = Compiler::default();
@@ -169,8 +176,12 @@ impl Compiler {
         let source =
             std::fs::read_to_string(&path).map_err(|err| Err(format!("{}: {}", path, err)))?;
         // info!("Parsing {}", path);
+        self.compile_str(&source)
+    }
+
+    /// Turns a string of LDPL code into C++ code.
+    pub fn compile_str(&mut self, source: &str) -> LDPLResult<()> {
         let ast = LDPLParser::parse(Rule::program, &source)?;
-        // info!("Compiling {}", path);
         self.compile(ast)
     }
 

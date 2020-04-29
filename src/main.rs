@@ -1,6 +1,6 @@
 use ldpl::{builder, compiler, LDPLResult};
 use std::{
-    path::Path,
+    io::{self, Read},
     process::{Command, Stdio},
 };
 
@@ -56,7 +56,9 @@ fn run() -> LDPLResult<()> {
 
     let mut command = DEFAULT_COMMAND;
     let mut file = String::new();
-    let mut bin = String::new();
+    let mut outfile = None;
+    let mut includes = vec![];
+    let mut stdin = String::new();
 
     // split args on = so -o=file is the same as -o file
     let mut new_args = vec![];
@@ -70,7 +72,6 @@ fn run() -> LDPLResult<()> {
         }
     }
     let mut args = new_args;
-    let mut includes = vec![];
 
     while !args.is_empty() {
         let arg = args.remove(0);
@@ -88,10 +89,15 @@ fn run() -> LDPLResult<()> {
                 if args.is_empty() {
                     error!("binary name expected.");
                 }
-                bin = args.remove(0);
+                outfile = Some(args.remove(0));
             }
             "-i" => includes.push(args.remove(0)),
-            "-f" | "-c" => todo!(),
+            "-f" => todo!(),
+            "-c" => {
+                if let Err(error) = io::stdin().read_to_string(&mut stdin) {
+                    error!("Error reading STDIN: {}", error);
+                }
+            }
             "build" => command = "build",
             "run" => command = "run",
             _ if arg.starts_with('-') => error!("Unknown flag {}", arg),
@@ -101,46 +107,34 @@ fn run() -> LDPLResult<()> {
 
     quiet = command != "build";
 
-    if file.is_empty() && !args.is_empty() {
-        file = args.remove(0);
-    } else if file.is_empty() {
-        error!("filename expected.");
+    if stdin.is_empty() {
+        if file.is_empty() && !args.is_empty() {
+            file = args.remove(0);
+        } else if file.is_empty() {
+            error!("filename expected.");
+        }
     }
 
-    info!("Loading {}", file);
-    let path = Path::new(&file);
-    let bin = if bin.is_empty() {
-        format!(
-            "{}/{}",
-            path.parent()
-                .and_then(|d| Some(d.to_string_lossy()))
-                .unwrap_or(".".into()),
-            path.file_stem()
-                .and_then(|f| Some(format!("{}-bin", f.to_string_lossy())))
-                .unwrap_or("ldpl-output-bin".into())
-        )
-        .trim_matches('/')
-        .into()
-    } else {
-        bin
-    };
-
-    info!("Compiling {}", bin);
+    info!("Compiling {}", file);
     let mut compiler = compiler::new();
     if !includes.is_empty() {
         for file in includes {
             compiler.load_and_compile(&file)?;
         }
     }
-    compiler.load_and_compile(&file)?;
+    if stdin.is_empty() {
+        compiler.load_and_compile(&file)?;
+    } else {
+        compiler.compile_str(&stdin)?;
+    }
 
     if command == "print" {
         println!("{}", compiler);
         return Ok(());
     }
 
-    info!("Building {}", bin);
-    builder::build(&compiler.to_string(), Some(&bin))?;
+    info!("Building {}", file);
+    let bin = builder::build(&file, &compiler.to_string(), outfile)?;
     info!("Saved as {}", bin);
     success!("File(s) compiled successfully.");
 
