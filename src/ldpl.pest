@@ -35,7 +35,7 @@ program = _{
 //
 
 header_stmt = {
-    include_stmt | using_stmt | extension_stmt
+    include_stmt | using_stmt | extension_stmt | flag_stmt
 }
 include_stmt = {
     ^"INCLUDE" ~ text
@@ -45,6 +45,10 @@ using_stmt = {
 }
 extension_stmt = {
     ^"EXTENSION" ~ text
+}
+flag_stmt = {
+    ^"FLAG" ~ text ~ text
+    | ^"FLAG" ~ text
 }
 
 ////

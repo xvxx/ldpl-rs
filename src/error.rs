@@ -1,4 +1,5 @@
 #![allow(unused_macros)]
+use crate::parser::Rule;
 use std::{error, fmt, io};
 
 #[derive(Debug)]
@@ -29,6 +30,28 @@ impl error::Error for LDPLError {
 impl fmt::Display for LDPLError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Error: {}", self.details)
+    }
+}
+
+impl From<Result<String, String>> for LDPLError {
+    fn from(error: Result<String, String>) -> Self {
+        LDPLError {
+            details: format!("{}", error.unwrap_err()),
+            line: 0,
+            col: 0,
+            len: 1,
+        }
+    }
+}
+
+impl From<pest::error::Error<Rule>> for LDPLError {
+    fn from(error: pest::error::Error<Rule>) -> Self {
+        LDPLError {
+            details: format!("{}", error),
+            line: 0,
+            col: 0,
+            len: 1,
+        }
     }
 }
 

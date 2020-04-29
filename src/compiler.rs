@@ -1,6 +1,9 @@
 //! The Compiler generates a String of C++ code from parsed LDPL code.
 
-use crate::{parser::Rule, LDPLResult, LDPLType};
+use crate::{
+    parser::{LDPLParser, Parser, Rule},
+    LDPLResult, LDPLType,
+};
 use pest::iterators::{Pair, Pairs};
 use std::{
     collections::HashMap,
@@ -129,6 +132,13 @@ pub fn compile(ast: Pairs<Rule>) -> LDPLResult<Compiler> {
     Ok(compiler)
 }
 
+/// Turns LDPL code on disk into C++ code.
+pub fn load_and_compile(path: &str) -> LDPLResult<Compiler> {
+    let mut compiler = Compiler::default();
+    compiler.load_and_compile(path)?;
+    Ok(compiler)
+}
+
 /// Treating the compiler as a string produces the compiled C++.
 impl fmt::Display for Compiler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -146,6 +156,17 @@ impl fmt::Display for Compiler {
 }
 
 impl Compiler {
+    /// Load a file from disk, parse it, and generate C++ code.
+    pub fn load_and_compile(&mut self, path: &str) -> LDPLResult<()> {
+        // info!("Loading {}", path);
+        let source =
+            std::fs::read_to_string(&path).map_err(|err| Err(format!("{}: {}", path, err)))?;
+        // info!("Parsing {}", path);
+        let ast = LDPLParser::parse(Rule::program, &source)?;
+        // info!("Compiling {}", path);
+        self.compile(ast)
+    }
+
     /// Turns parsed LDPL code into C++ code.
     pub fn compile(&mut self, ast: Pairs<Rule>) -> LDPLResult<()> {
         // Predeclared vars
@@ -156,7 +177,7 @@ impl Compiler {
 
         for pair in ast {
             match pair.as_rule() {
-                Rule::header_stmt => todo!(),
+                Rule::header_stmt => self.compile_header(pair)?,
                 Rule::data_section => {
                     let data = self.compile_data(pair, false)?;
                     self.vars.push(data);
@@ -185,6 +206,23 @@ impl Compiler {
             }
         }
 
+        Ok(())
+    }
+
+    /// Process INCLUDE, EXTENSION, and FLAGs in the header above
+    /// the DATA: and PROCEDURE: sections.
+    fn compile_header(&mut self, pair: Pair<Rule>) -> LDPLResult<()> {
+        let stmt = pair.into_inner().next().unwrap();
+        match stmt.as_rule() {
+            Rule::include_stmt => {
+                let file = stmt.into_inner().next().unwrap().as_str();
+                self.load_and_compile(&file[1..file.len() - 1])?; // strip "quotes"
+            }
+            Rule::using_stmt => todo!(),
+            Rule::extension_stmt => todo!(),
+            Rule::flag_stmt => todo!(),
+            _ => unexpected!(stmt),
+        }
         Ok(())
     }
 
