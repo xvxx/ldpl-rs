@@ -325,7 +325,7 @@ impl Compiler {
             let ident = parts.next().unwrap().as_str();
             let typename = parts.next().unwrap().as_str();
             self.locals
-                .insert(ident.to_string(), LDPLType::from(typename));
+                .insert(ident.to_uppercase(), LDPLType::from(typename));
             out.push(format!("{}& {}", compile_type(typename), mangle_var(ident)));
         }
 
