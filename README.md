@@ -53,7 +53,7 @@ done, we'll move onto these four, higher level goals:
 
 | **Status** | **Goal**      | **Comments** |
 | ---------- | ------------- | ------------ |
-| 👷         | `examples/`   | In Progress  |
+| ✅         | `examples/`   | Done         |
 | 👷         | `ldpltests`   | In Progress  |
 | 👷         | `--flags`     | Mostly done  |
 | 🚧         | `GILD`        | Planned      |
@@ -93,7 +93,7 @@ done, we'll move onto these four, higher level goals:
 | fibonacci.ldpl      | ✅         |                    |
 | floyd-warshall.ldpl | ✅         |                    |
 | helloworld.ldpl     | ✅         |                    |
-| leapyear.ldpl       | ❌         | ELSE IF            |
+| leapyear.ldpl       | ✅         |                    |
 | loop_counter.ldpl   | ✅         |                    |
 | oddornot.ldpl       | ✅         |                    |
 | quine.ldpl          | ✅         |                    |
