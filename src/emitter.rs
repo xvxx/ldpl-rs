@@ -38,6 +38,8 @@ pub struct Emitter {
     in_sub: bool,
     // in a loop? BREAK/CONTINUE only work in loops. Vec for nesting.
     in_loop: Vec<bool>,
+    // counter for tmp variables
+    tmp_id: usize,
 }
 
 /// Call when an unexpected Pair/Rule is encountered.
@@ -97,6 +99,7 @@ pub fn emit(ast: Pairs<Rule>) -> LDPLResult<String> {
         locals: HashMap::default(),
         in_loop: vec![],
         in_sub: false,
+        tmp_id: 0,
     };
     emitter.emit(ast)
 }
@@ -166,10 +169,10 @@ impl Emitter {
             };
 
             var.push(';');
-            out.push(var);
+            out.push(emit_line!(var));
         }
 
-        Ok(format!("{}\n\n", out.join("\n")))
+        Ok(format!("{}\n", out.join("")))
     }
 
     /// Convert a param list into a C++ function signature params list.
@@ -210,7 +213,13 @@ impl Emitter {
         dedent!();
         self.in_sub = false;
 
-        emit!("void {}({}) {{{}\n{}}}", name, params, vars, body.join(""),)
+        emit!(
+            "void {}({}) {{\n{}{}}}\n",
+            name,
+            params,
+            vars,
+            body.join(""),
+        )
     }
 
     /// Emit a stmt from the PROCEDURE: section of a file or function.
@@ -361,7 +370,6 @@ impl Emitter {
         let mut iter = pair.into_inner();
         let ident = iter.next().unwrap();
 
-        let mut var_id = 0;
         let mut prefix = vec![];
 
         let mut params = vec![];
@@ -369,20 +377,20 @@ impl Emitter {
             for param in expr_list.into_inner() {
                 match param.as_rule() {
                     Rule::number => {
-                        let var = format!("LPVAR_{}", var_id);
+                        let var = format!("LPVAR_{}", self.tmp_id);
                         prefix.push(emit_line!(
                             "ldpl_number {} = {};",
                             var,
                             self.emit_expr(param)?
                         ));
                         params.push(var);
-                        var_id += 1;
+                        self.tmp_id += 1;
                     }
                     Rule::text | Rule::linefeed => {
-                        let var = format!("LPVAR_{}", var_id);
+                        let var = format!("LPVAR_{}", self.tmp_id);
                         prefix.push(emit_line!("chText {} = {};", var, self.emit_expr(param)?));
                         params.push(var);
-                        var_id += 1;
+                        self.tmp_id += 1;
                     }
                     Rule::var => params.push(self.emit_expr(param)?),
                     _ => unexpected!(param),
@@ -634,11 +642,13 @@ impl Emitter {
         let mut iter = pair.into_inner();
         let ident = mangle_var(iter.next().unwrap().as_str());
         let collection = self.emit_expr(iter.next().unwrap())?;
-        let range_var = "RVAR_0"; // TODO: not really...
+
+        let range_var = format!("RVAR_{}", self.tmp_id);
+        self.tmp_id += 1;
 
         self.in_loop.push(true);
         indent!();
-        let mut body = vec![];
+        let mut body = vec![emit_line!("{} = {};", ident, range_var)];
         for node in iter {
             body.push(self.emit_subproc_stmt(node)?);
         }
@@ -646,13 +656,12 @@ impl Emitter {
         self.in_loop.pop();
 
         Ok(format!(
-            "{}{}{}{}",
+            "{}{}{}",
             emit_line!(
                 "for (auto& {} : {}.inner_collection) {{",
                 range_var,
                 collection
             ),
-            emit_line!("{} = {};", ident, range_var),
             body.join(""),
             emit_line!("}")
         ))
