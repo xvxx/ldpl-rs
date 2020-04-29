@@ -1,4 +1,4 @@
-use ldpl::{builder, compiler, LDPLResult};
+use ldpl::{compiler, LDPLResult};
 use std::{
     io::{self, Read},
     process::{Command, Stdio},
@@ -147,7 +147,7 @@ fn run() -> LDPLResult<()> {
     }
 
     info!("Building {}", file);
-    let bin = builder::build(&file, &compiler.to_string(), outfile)?;
+    let bin = compiler.build(&file, outfile)?;
     info!("Saved as {}", bin);
     success!("File(s) compiled successfully.");
 
