@@ -51,6 +51,10 @@ pub struct Compiler {
     /// Global variable declarations.
     pub vars: Vec<String>,
 
+    /// C++ Extension files to include when building.
+    /// Add with `add_extension()`.
+    pub exts: Vec<String>,
+
     /// Global variables defined in the DATA: section. Used for error
     /// checking.
     globals: HashMap<String, LDPLType>,
@@ -179,6 +183,11 @@ impl Compiler {
         self.compile(&source)
     }
 
+    pub fn add_extension(&mut self, path: String) -> LDPLResult<()> {
+        self.exts.push(path);
+        Ok(())
+    }
+
     /// Turns a string of LDPL code into C++ code.
     pub fn compile(&mut self, source: &str) -> LDPLResult<()> {
         let ast = LDPLParser::parse(Rule::program, &source)?;
@@ -236,10 +245,13 @@ impl Compiler {
         match stmt.as_rule() {
             Rule::include_stmt => {
                 let file = stmt.into_inner().next().unwrap().as_str();
-                self.load_and_compile(&file[1..file.len() - 1])?; // strip "quotes"
+                self.load_and_compile(unquote(file))?;
+            }
+            Rule::extension_stmt => {
+                let ext_file = unquote(stmt.into_inner().next().unwrap().as_str());
+                self.add_extension(ext_file.into())?;
             }
             Rule::using_stmt => todo!(),
-            Rule::extension_stmt => todo!(),
             Rule::flag_stmt => todo!(),
             _ => unexpected!(stmt),
         }
@@ -1264,4 +1276,9 @@ fn mangle_extern(ident: &str) -> String {
     }
 
     mangled.to_uppercase()
+}
+
+/// Remove "quotes" from a literal text string.
+fn unquote(text: &str) -> &str {
+    &text[1..text.len() - 1]
 }
