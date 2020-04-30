@@ -21,12 +21,32 @@ compiled into a standalone binary. Generated code should be 100%
 compatible with the official compiler, meaning LDPL-RS should work
 just fine with regular LDPL extensions.
 
+## Installation
+
+LDPL-RS requires [**cargo**][rustup] to install and a [**C++
+compiler**][cpp-compiler] to use.
+
+Once you've got them both, installation is a breeze:
+
+    cargo install ldpl
+
+You should now have an **ldpl-rs** binary that you can use to compile
+simple LDPL 4.4 programs, like any of the official examples:
+
+    git clone -b 4.4 git://github.com/lartu/ldpl
+    ldpl-rs ldpl/examples/99bottles.ldpl
+
+Note the difference between the Crate name and binary. This is to
+avoid collision with the official LDPL compiler.
+
 ## Building It
 
-LDPL-RS requires **make**, [**cargo**][rustup], and [**Rust**][rustup]
-to build, and a [**C++ compiler**][cpp-compiler] to use.
+Building from source requires **make** and [**cargo**][rustup].
+LDPL-RS also requires a [**C++ compiler**][cpp-compiler] to build LDPL
+programs, so you'll need one installed even after building the
+`ldpl-rs` binary.
 
-Once you've got all that, building is a breeze:
+Once you've got all that, clone and compile the project:
 
     git clone git://github.com/xvxx/ldpl-rs
     cd ldpl-rs
