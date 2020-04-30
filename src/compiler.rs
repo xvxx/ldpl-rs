@@ -71,8 +71,8 @@ pub struct Compiler {
     /// Local variables, re-defined for each sub-procedure.
     locals: HashMap<String, LDPLType>,
 
-    /// Sub definitions.
-    defs: HashMap<String, bool>,
+    /// Sub definitions. name => params
+    defs: HashMap<String, Vec<LDPLType>>,
 
     /// Path of the file we're currently compiling, if any.
     path: Option<String>,
@@ -347,31 +347,36 @@ impl Compiler {
         Ok(format!("{}\n", out.join("")))
     }
 
-    /// Convert a param list into a C++ function signature params list.
-    fn compile_params(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+    /// Convert a param list into a vector of param types and a C++
+    /// function signature params list.
+    fn compile_params(&mut self, pair: Pair<Rule>) -> LDPLResult<(Vec<LDPLType>, String)> {
         let mut out = vec![];
+        let mut types = vec![];
 
         for def in pair.into_inner() {
             assert!(def.as_rule() == Rule::type_def);
             let mut parts = def.into_inner();
             let ident = parts.next().unwrap().as_str();
             let typename = parts.next().unwrap().as_str();
-            self.locals
-                .insert(ident.to_uppercase(), LDPLType::from(typename));
+            let typetype = LDPLType::from(typename);
+            types.push(typetype.clone());
+            self.locals.insert(ident.to_uppercase(), typetype);
             out.push(format!("{}& {}", compile_type(typename), mangle_var(ident)));
         }
 
-        Ok(out.join(", "))
+        Ok((types, out.join(", ")))
     }
 
     /// Function definition.
     fn compile_sub_def_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
         let mut iter = pair.into_inner();
         let mut params = String::new();
+        let mut param_types = vec![];
         let mut vars = String::new();
         let mut body: Vec<String> = vec![];
         let mut is_extern = false;
         let ident;
+        self.locals.clear();
 
         let first = iter.next().unwrap();
         if first.as_rule() == Rule::external {
@@ -385,22 +390,39 @@ impl Compiler {
 
         if self.defs.contains_key(&ident_upper) {
             return error!("Redefining existing SUB-PROCEDURE: {}", ident);
-        } else {
-            self.defs.insert(ident.to_uppercase(), true);
         }
 
         if self.expected_defs.contains_key(&ident_upper) {
             self.expected_defs.remove(&ident_upper);
         }
 
+        let mut node = iter.next().unwrap();
+
+        if node.as_rule() == Rule::sub_param_section {
+            let (types, string) = self.compile_params(node)?;
+            params = string;
+            param_types = types;
+            node = iter.next().unwrap();
+        }
+
+        if node.as_rule() == Rule::sub_data_section {
+            vars = self.compile_data(node, true)?;
+            node = iter.next().unwrap();
+        }
+
+        // done with the header, register this SUB so we
+        // can call it recursively in the body.
+        self.defs.insert(ident.to_uppercase(), param_types);
+
         self.in_sub = true;
-        self.locals.clear();
         indent!();
-        for node in iter {
-            match node.as_rule() {
-                Rule::sub_param_section => params = self.compile_params(node)?,
-                Rule::sub_data_section => vars = self.compile_data(node, true)?,
-                _ => body.push(self.compile_subproc_stmt(node)?),
+        loop {
+            body.push(self.compile_subproc_stmt(node)?);
+            let node_opt = iter.next();
+            if node_opt.is_none() {
+                break;
+            } else {
+                node = node_opt.unwrap();
             }
         }
         dedent!();
@@ -1352,7 +1374,7 @@ impl Compiler {
                 } else if let Some(t) = self.globals.get(&var.as_str().to_uppercase()) {
                     Ok(t)
                 } else {
-                    error!("No type found for {:?}", var)
+                    error!("No type found for {}", var.as_str())
                 }
             }
             Rule::lookup => {
