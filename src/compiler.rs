@@ -68,6 +68,11 @@ pub struct Compiler {
     /// Sub definitions.
     defs: HashMap<String, bool>,
 
+    /// When a sub is called before it's defined, we stick it in this
+    /// list. When it's defined we remove it from the list. If the
+    /// list isn't empty when we're done, we have an error.
+    pub expected_defs: HashMap<String, bool>,
+
     /// User-defined statements created with CREATE STATEMENT
     user_stmts: HashMap<String, String>,
 
@@ -352,10 +357,16 @@ impl Compiler {
             ident = first.as_str();
         }
 
-        if self.defs.contains_key(&ident.to_uppercase()) {
+        let ident_upper = ident.to_uppercase();
+
+        if self.defs.contains_key(&ident_upper) {
             return error!("Redefining existing SUB-PROCEDURE: {}", ident);
         } else {
             self.defs.insert(ident.to_uppercase(), true);
+        }
+
+        if self.expected_defs.contains_key(&ident_upper) {
+            self.expected_defs.remove(&ident_upper);
         }
 
         self.in_sub = true;
@@ -647,10 +658,7 @@ impl Compiler {
         let ident = iter.next().unwrap().as_str();
 
         if !is_extern && !self.defs.contains_key(&ident.to_uppercase()) {
-            return error!(
-                "The subprocedure {} is called but never declared.",
-                ident.to_uppercase()
-            );
+            self.expected_defs.insert(ident.to_uppercase(), true);
         }
 
         let (prefix, params) = self.compile_arg_list(iter)?;

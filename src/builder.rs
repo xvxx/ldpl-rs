@@ -7,6 +7,13 @@ impl Compiler {
     /// Run the local C++ compiler and build a binary.
     /// Returns the name of the built binary.
     pub fn build(&self, path: &str, outfile: Option<String>) -> LDPLResult<String> {
+        // TODO better way to check errors after compiling
+        if !self.expected_defs.is_empty() {
+            for (sub, _) in &self.expected_defs {
+                return error!("The subprocedure {} is called but never declared.", sub);
+            }
+        }
+
         let path = Path::new(&path);
         let target = if outfile.is_none() {
             format!(
