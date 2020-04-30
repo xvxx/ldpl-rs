@@ -55,11 +55,15 @@ can also compile [Gild].
 
 It passes 11 of 12 of the [official LDPL tests][ldpltest].
 
-However, these features are currently unsupported:
+However, these features are currently unsupported (but coming soon):
 
 - [ ] CREATE STATEMENT overloading
 - [ ] nested collections (NUMBER LIST LIST LIST)
 - [ ] OF syntax (LIST OF NUMBERS)
+
+To run the tests, clone this project (instructions above) and run:
+
+    make test
 
 ## [LDPLTest][ldpltest] Pass/Fail Status
 
