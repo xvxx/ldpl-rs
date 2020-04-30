@@ -50,18 +50,14 @@ something else in your `$PATH`.
 ## Status
 
 This project is in its infancy, but can compile simple LDPL programs.
+It supports all LDPL 4.4 statements, including C++ extensions, and
+can compile and run all the examples that shipped with LDPL 4.4.
 
-Right now it supports most LDPL 4.4 statements and can run all the
-examples that shipped with LDPL 4.4.
-
-User-defined statements and C++ Extensions statements are in progress.
-We also aim to pass all the [tests][ldpltest].
+It also passes 10 of 12 of the [official LDPL tests][ldpltest].
 
 These features are currently unsupported:
 
-- [ ] CREATE STATEMENT
-- [ ] Calling statements made with CREATE STATEMENT
-- [ ] deeply nested collections (NUMBER LIST LIST LIST)
+- [ ] nested collections (NUMBER LIST LIST LIST)
 - [ ] OF syntax (LIST OF NUMBERS)
 
 ## [LDPLTest][ldpltest] Pass/Fail Status
