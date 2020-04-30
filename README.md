@@ -51,7 +51,7 @@ something else in your `$PATH`.
 This project is in its infancy, but can compile simple LDPL programs.
 It supports all LDPL 4.4 statements, including C++ extensions, and
 can compile and run all the examples that shipped with LDPL 4.4. It
-can also compile [Gild].
+can also compile [Gild][gild] and [ldpl-todo].
 
 It passes 11 of 12 of the [official LDPL tests][ldpltest].
 
@@ -124,6 +124,7 @@ LDPL community for all their contributions!
 [ldpltest]: https://github.com/Lartu/ldpltest
 [projects]: https://www.ldpl-lang.org/projects.html
 [gild]: https://github.com/xvxx/gild
+[ldpl-todo]: https://github.com/xvxx/ldpl-todo
 [lute]: https://github.com/lartu/lute
 [ldpl-socket]: https://github.com/xvxx/ldpl-socket
 [examples]: https://github.com/Lartu/ldpl/tree/4.4/examples
