@@ -186,7 +186,7 @@ impl fmt::Display for Compiler {
             CPP_HEADER,
             self.forwards.join("\n"),
             self.vars.join("\n"),
-            self.subs.join("\n"),
+            self.subs.join(""),
             MAIN_HEADER,
             self.main.join(""),
             MAIN_FOOTER
@@ -795,7 +795,7 @@ impl Compiler {
 
         let inner = pair.into_inner().next().unwrap();
         match inner.as_rule() {
-            Rule::ident => Ok(mangle_var(inner.as_str())),
+            Rule::ident => Ok(self.mangle_var(inner.as_str())),
             Rule::lookup => self.compile_lookup_from_iter(inner.into_inner()),
             _ => unexpected!(inner),
         }
