@@ -297,7 +297,7 @@ impl Compiler {
                 }
             }
 
-            let varname = ident.to_string().to_uppercase();
+            let varname = ident.to_uppercase();
             let ldpltype = LDPLType::from(typename);
             if local {
                 if self.locals.contains_key(&varname) {
@@ -337,19 +337,32 @@ impl Compiler {
 
     /// Function definition.
     fn compile_sub_def_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
+        let mut iter = pair.into_inner();
         let mut params = String::new();
         let mut vars = String::new();
         let mut body: Vec<String> = vec![];
-        let mut ident = "";
         let mut is_extern = false;
+        let ident;
+
+        let first = iter.next().unwrap();
+        if first.as_rule() == Rule::external {
+            is_extern = true;
+            ident = iter.next().unwrap().as_str();
+        } else {
+            ident = first.as_str();
+        }
+
+        if self.defs.contains_key(&ident.to_uppercase()) {
+            return error!("Redefining existing SUB-PROCEDURE: {}", ident);
+        } else {
+            self.defs.insert(ident.to_uppercase(), true);
+        }
 
         self.in_sub = true;
         self.locals.clear();
         indent!();
-        for node in pair.into_inner() {
+        for node in iter {
             match node.as_rule() {
-                Rule::external => is_extern = true,
-                Rule::ident => ident = node.as_str(),
                 Rule::sub_param_section => params = self.compile_params(node)?,
                 Rule::sub_data_section => vars = self.compile_data(node, true)?,
                 _ => body.push(self.compile_subproc_stmt(node)?),
@@ -357,12 +370,6 @@ impl Compiler {
         }
         dedent!();
         self.in_sub = false;
-
-        if self.defs.contains_key(ident) {
-            return error!("Redefining existing SUB-PROCEDURE: {}", ident);
-        } else {
-            self.defs.insert(ident.to_string(), true);
-        }
 
         let mangled = if is_extern {
             mangle_extern(ident)
@@ -383,22 +390,21 @@ impl Compiler {
     /// CREATE STATEMENT <text> EXECUTING <ident>
     fn add_user_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<()> {
         let mut iter = pair.into_inner();
-        let stmt = unquote(iter.next().unwrap().as_str());
+        let stmt = unquote(iter.next().unwrap().as_str()).to_uppercase();
         let ident = iter.next().unwrap().as_str();
 
-        if self.user_stmts.contains_key(stmt) {
+        if self.user_stmts.contains_key(&stmt) {
             return error!("Statement can't be re-defined: {}", stmt);
         }
 
-        self.user_stmts
-            .insert(stmt.to_string(), mangle_sub(ident).to_string());
+        self.user_stmts.insert(stmt, mangle_sub(ident).to_string());
 
         Ok(())
     }
 
     /// Translate a user-defined STATEMENT into a SUB call.
     fn compile_user_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
-        let stmt = pair.as_str();
+        let stmt = pair.as_str().to_uppercase();
         let iter = pair.into_inner();
         let call_parts: Vec<_> = stmt.split(" ").collect();
         let mut args = vec![];
@@ -640,9 +646,9 @@ impl Compiler {
         let mut iter = call_stmt.into_inner();
         let ident = iter.next().unwrap().as_str();
 
-        if !is_extern && !self.defs.contains_key(ident) {
+        if !is_extern && !self.defs.contains_key(&ident.to_uppercase()) {
             return error!(
-                "the subprocedure {} is called but never declared.",
+                "The subprocedure {} is called but never declared.",
                 ident.to_uppercase()
             );
         }
