@@ -61,6 +61,9 @@ pub struct Compiler {
     /// Forward function declarations.
     forwards: Vec<String>,
 
+    /// EXTERNAL variables
+    extern_vars: HashMap<String, bool>,
+
     /// Global variables defined in the DATA: section. Used for error
     /// checking.
     globals: HashMap<String, LDPLType>,
@@ -302,11 +305,14 @@ impl Compiler {
             let mut parts = def.into_inner();
             let ident = parts.next().unwrap().as_str();
             let typename = parts.next().unwrap().as_str();
-            let mut var = format!("{} {}", compile_type(typename), mangle_var(ident));
+            let varname = ident.to_uppercase();
+            let mut var: String;
 
             if is_extern {
-                var = format!("extern {}", var);
+                self.extern_vars.insert(varname.clone(), true);
+                var = format!("extern {} {}", compile_type(typename), mangle_extern(ident));
             } else {
+                var = format!("{} {}", compile_type(typename), mangle_var(ident));
                 if typename == "number" {
                     var.push_str(" = 0");
                 } else if typename == "text" {
@@ -314,7 +320,6 @@ impl Compiler {
                 }
             }
 
-            let varname = ident.to_uppercase();
             let ldpltype = LDPLType::from(typename);
             if local {
                 if self.locals.contains_key(&varname) {
@@ -761,10 +766,10 @@ impl Compiler {
     fn compile_expr(&self, pair: Pair<Rule>) -> LDPLResult<String> {
         Ok(match pair.as_rule() {
             Rule::var => self.compile_var(pair)?,
-            Rule::ident => mangle_var(pair.as_str()),
             Rule::number => self.compile_number(pair)?,
             Rule::text => pair.as_str().to_string(),
             Rule::linefeed => "\"\\n\"".to_string(),
+            Rule::ident => self.mangle_var(pair.as_str()),
             _ => return error!("UNIMPLEMENTED: {:?}", pair),
         })
     }
@@ -1366,6 +1371,18 @@ impl Compiler {
         }
 
         file.to_string()
+    }
+
+    /// Like the freestanding mangle_var(), but also works with
+    /// external variables. Use this when you want to reference a
+    /// variable that can be either global, local, or external.
+    fn mangle_var(&self, ident: &str) -> String {
+        let ident = ident.to_uppercase();
+        if self.extern_vars.contains_key(&ident) {
+            mangle_extern(&ident)
+        } else {
+            mangle_var(&ident)
+        }
     }
 }
 
