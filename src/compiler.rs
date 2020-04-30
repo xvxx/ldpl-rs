@@ -21,8 +21,7 @@ static DEPTH: AtomicUsize = AtomicUsize::new(0);
 const CPP_HEADER: &'static str = include_str!("../lib/ldpl_header.cpp");
 
 /// Setup the C++ main() function
-const MAIN_HEADER: &'static str = r#"ldpl_list<chText> VAR_ARGV;
-
+const MAIN_HEADER: &'static str = r#"
 int main(int argc, char* argv[]) {
     cout.precision(numeric_limits<ldpl_number>::digits10);
     for(int i = 1; i < argc; ++i) VAR_ARGV.inner_collection.push_back(argv[i]);
@@ -82,8 +81,10 @@ pub struct Compiler {
     /// list isn't empty when we're done, we have an error.
     pub expected_defs: HashMap<String, bool>,
 
-    /// User-defined statements created with CREATE STATEMENT
-    user_stmts: HashMap<String, String>,
+    /// User-defined statements created with CREATE STATEMENT.
+    /// The same statement can reference multiple SUBs based on the
+    /// param types, so we use a vec.
+    user_stmts: HashMap<String, Vec<String>>,
 
     // in a sub-procedure? RETURN doesn't work outside of one.
     in_sub: bool,
@@ -184,7 +185,7 @@ impl fmt::Display for Compiler {
             f,
             "{}{}{}{}{}{}{}",
             CPP_HEADER,
-            self.forwards.join("\n"),
+            self.forwards.join(""),
             self.vars.join("\n"),
             self.subs.join(""),
             MAIN_HEADER,
@@ -231,6 +232,7 @@ impl Compiler {
     pub fn compile_ast(&mut self, ast: Pairs<Rule>) -> LDPLResult<()> {
         // Predeclared vars
         if self.globals.is_empty() {
+            self.vars.push("ldpl_list<chText> VAR_ARGV;".into());
             self.globals
                 .insert("ARGV".into(), LDPLType::List(Box::new(LDPLType::Text)));
             self.globals.insert("ERRORCODE".into(), LDPLType::Number);
@@ -376,7 +378,10 @@ impl Compiler {
         let mut body: Vec<String> = vec![];
         let mut is_extern = false;
         let ident;
+
         self.locals.clear();
+        self.in_sub = true;
+        indent!();
 
         let first = iter.next().unwrap();
         if first.as_rule() == Rule::external {
@@ -414,8 +419,6 @@ impl Compiler {
         // can call it recursively in the body.
         self.defs.insert(ident.to_uppercase(), param_types);
 
-        self.in_sub = true;
-        indent!();
         loop {
             body.push(self.compile_subproc_stmt(node)?);
             let node_opt = iter.next();
@@ -449,12 +452,20 @@ impl Compiler {
         let mut iter = pair.into_inner();
         let stmt = unquote(iter.next().unwrap().as_str()).to_uppercase();
         let ident = iter.next().unwrap().as_str();
+        let sub = mangle_sub(ident);
 
-        if self.user_stmts.contains_key(&stmt) {
-            return error!("Statement can't be re-defined: {}", stmt);
+        if !self.defs.contains_key(&ident.to_uppercase()) {
+            return error!(
+                "CREATE STATEMENT used with unknown sub-procedure: {}",
+                ident
+            );
         }
 
-        self.user_stmts.insert(stmt, mangle_sub(ident).to_string());
+        if let Some(subs) = self.user_stmts.get_mut(&stmt) {
+            subs.push(sub);
+        } else {
+            self.user_stmts.insert(stmt, vec![sub]);
+        }
 
         Ok(())
     }
@@ -464,11 +475,13 @@ impl Compiler {
         let stmt = pair.as_str().to_uppercase();
         let iter = pair.into_inner();
         let call_parts: Vec<_> = stmt.split(" ").collect();
-        let mut args = vec![];
         let mut matched = false;
         let mut sub_name = String::new();
 
-        'outer: for (pattern, sub) in &self.user_stmts {
+        // args is list of (index, type)
+        let mut args: Vec<(usize, LDPLType)> = vec![];
+
+        'outer: for (pattern, subs) in &self.user_stmts {
             let mut def_parts: Vec<_> = pattern.split(" ").collect();
 
             // don't bother if the patterns aren't the same length
@@ -480,24 +493,38 @@ impl Compiler {
             for (i, call_part) in call_parts.iter().enumerate() {
                 let def_part = def_parts.remove(0); // safe - we checked size
                 if def_part == "$" {
-                    args.push(i);
+                    args.push((i, LDPLType::from(call_part)));
                 } else if *call_part != def_part {
                     continue 'outer;
                 }
             }
 
-            // if we got here, we found a match
-            matched = true;
-            sub_name = sub.clone();
-            break;
+            // if we got here, we may have found a match.
+            // now we need to compare arity and param types to find
+            // the specific sub-procedure to call.
+            let call_params: Vec<LDPLType> = args.iter().map(|t| t.1.clone()).collect();
+            for sub in subs {
+                if let Some(sub_params) = self.defs.get(sub) {
+                    if *sub_params == call_params {
+                        sub_name = sub.clone();
+                        matched = true;
+                        break 'outer;
+                    }
+                }
+            }
+
+            // if we're here, we didn't find a match
+            return error!(
+                "Statement arguments didn't match any sub-procedures: {}",
+                stmt
+            );
         }
 
         if matched {
             let iter = iter
                 .enumerate()
-                .filter(|(i, _rule)| args.contains(i))
+                .filter(|(i, _rule)| args.iter().any(|(idx, _)| idx == i))
                 .map(|(_, rule)| rule);
-            // .collect();
             let (prefix, args) = self.compile_arg_list(iter)?;
             return Ok(format!(
                 "{}\n{}",
@@ -717,7 +744,7 @@ impl Compiler {
 
         let fwd_decl = format!("void {}();", mangled);
         if !self.forwards.contains(&fwd_decl) {
-            self.forwards.push(format!("void {}();", mangled));
+            self.forwards.push(format!("void {}();\n", mangled));
         }
 
         Ok(format!(
@@ -1327,16 +1354,17 @@ impl Compiler {
         let rule = pair.as_rule();
         let mut iter = pair.into_inner();
         match rule {
-            Rule::execute_expr_stmt => {
-                emit!("system({});", self.compile_expr(iter.next().unwrap())?)
-            }
+            Rule::execute_expr_stmt => emit!(
+                "system({});",
+                self.compile_c_char_array(iter.next().unwrap())?
+            ),
             Rule::execute_output_stmt => {
-                let expr = self.compile_expr(iter.next().unwrap())?;
+                let expr = self.compile_c_char_array(iter.next().unwrap())?;
                 let var = self.compile_var(iter.next().unwrap())?;
                 emit!("{} = exec({});", var, expr)
             }
             Rule::execute_exit_code_stmt => {
-                let expr = self.compile_expr(iter.next().unwrap())?;
+                let expr = self.compile_c_char_array(iter.next().unwrap())?;
                 let var = self.compile_var(iter.next().unwrap())?;
                 emit!(
                     "{} = (system({}) >> 8) & 0xff;", //shift wait() val and get lowest 2
@@ -1412,6 +1440,15 @@ impl Compiler {
         } else {
             mangle_var(&ident)
         }
+    }
+
+    /// Compile TEXT as a c char array, mostly for EXECUTE and friends.
+    fn compile_c_char_array(&self, node: Pair<Rule>) -> LDPLResult<String> {
+        Ok(match node.as_rule() {
+            Rule::var => format!("{}.str_rep().c_str()", mangle_var(node.as_str())),
+            Rule::text => node.as_str().to_string(),
+            _ => unexpected!(node),
+        })
     }
 }
 
