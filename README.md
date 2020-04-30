@@ -53,7 +53,7 @@ This project is in its infancy, but can compile simple LDPL programs.
 It supports all LDPL 4.4 statements, including C++ extensions, and
 can compile and run all the examples that shipped with LDPL 4.4.
 
-It also passes 10 of 12 of the [official LDPL tests][ldpltest].
+It also passes 11 of 12 of the [official LDPL tests][ldpltest].
 
 These features are currently unsupported:
 
@@ -66,7 +66,7 @@ These features are currently unsupported:
 | -------- | ---------- | ------------------ |
 | basicar  | ✅         |                    |
 | basictx  | ✅         |                    |
-| conflow  | ❌         | CREATE STMT        |
+| conflow  | ✅         |                    |
 | exec     | ✅         |                    |
 | explode  | ✅         |                    |
 | fibo     | ✅         |                    |
