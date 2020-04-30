@@ -16,3 +16,4 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const PLATFORM: &str = env!("PLATFORM");
 pub const GIT_REF: &str = env!("GIT_REF");
 pub const BUILD_DATE: &str = env!("BUILD_DATE");
+pub const LPM_LOCATION: &str = env!("LPMLOCATION");

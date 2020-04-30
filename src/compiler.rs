@@ -2,7 +2,7 @@
 
 use crate::{
     parser::{LDPLParser, Parser, Rule},
-    LDPLResult, LDPLType,
+    LDPLResult, LDPLType, LPM_LOCATION,
 };
 use pest::iterators::{Pair, Pairs};
 use std::{
@@ -288,7 +288,14 @@ impl Compiler {
                 let flag = unquote(stmt.into_inner().next().unwrap().as_str());
                 self.add_flag(flag.into())?;
             }
-            Rule::using_stmt => todo!(),
+            Rule::using_stmt => {
+                let name = stmt.into_inner().next().unwrap().as_str().to_lowercase();
+                let mut path = format!("{}{}/{}.ldpl", LPM_LOCATION, name, name);
+                if path.contains('~') {
+                    path = path.replace("~", env!("HOME"));
+                }
+                self.load_and_compile(&path)?;
+            }
             _ => unexpected!(stmt),
         }
         Ok(())
