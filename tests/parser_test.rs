@@ -1,3 +1,4 @@
+#![allow(unused_macros)]
 use ldpl::parser::{LDPLParser, Parser, Rule};
 
 // parse whole program
