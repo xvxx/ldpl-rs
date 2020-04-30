@@ -451,10 +451,9 @@ impl Compiler {
     fn add_user_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<()> {
         let mut iter = pair.into_inner();
         let stmt = unquote(iter.next().unwrap().as_str()).to_uppercase();
-        let ident = iter.next().unwrap().as_str();
-        let sub = mangle_sub(ident);
+        let ident = iter.next().unwrap().as_str().to_uppercase();
 
-        if !self.defs.contains_key(&ident.to_uppercase()) {
+        if !self.defs.contains_key(&ident) {
             return error!(
                 "CREATE STATEMENT used with unknown sub-procedure: {}",
                 ident
@@ -462,9 +461,9 @@ impl Compiler {
         }
 
         if let Some(subs) = self.user_stmts.get_mut(&stmt) {
-            subs.push(sub);
+            subs.push(ident);
         } else {
-            self.user_stmts.insert(stmt, vec![sub]);
+            self.user_stmts.insert(stmt, vec![ident]);
         }
 
         Ok(())
@@ -474,7 +473,8 @@ impl Compiler {
     fn compile_user_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
         let stmt = pair.as_str().to_uppercase();
         let iter = pair.into_inner();
-        let call_parts: Vec<_> = stmt.split(" ").collect();
+        let types_iter = iter.clone(); // for inferring types of stmt parts
+        let call_parts: Vec<_> = stmt.split(" ").map(|p| p.to_uppercase()).collect();
         let mut matched = false;
         let mut sub_name = String::new();
 
@@ -489,11 +489,13 @@ impl Compiler {
                 continue;
             }
 
-            // compare each word in the pattern
+            let mut types_iter = types_iter.clone(); // re-use each loop
+                                                     // compare each word in the pattern
             for (i, call_part) in call_parts.iter().enumerate() {
+                let node = types_iter.next().unwrap();
                 let def_part = def_parts.remove(0); // safe - we checked size
                 if def_part == "$" {
-                    args.push((i, LDPLType::from(call_part)));
+                    args.push((i, self.scalar_type_of_expr(node)?.clone()));
                 } else if *call_part != def_part {
                     continue 'outer;
                 }
@@ -529,7 +531,7 @@ impl Compiler {
             return Ok(format!(
                 "{}\n{}",
                 prefix,
-                emit_line!("{}({});", sub_name, args)
+                emit_line!("{}({});", mangle_sub(&sub_name), args)
             ));
         }
 
@@ -1381,6 +1383,26 @@ impl Compiler {
 // HELPERS
 
 impl Compiler {
+    /// Find the scalar type for an expression. Map(List(Text)) will
+    /// just give us Text.
+    fn scalar_type_of_expr(&self, expr: Pair<Rule>) -> LDPLResult<LDPLType> {
+        if let Ok(t) = self.type_of_expr(expr.clone()) {
+            self.scalar_type_of_collection(t.clone())
+        } else {
+            error!("Can't infer scalar type for expression: {:?}", expr)
+        }
+    }
+
+    /// Map(List(Text)) => Text
+    fn scalar_type_of_collection<'a>(&self, t: LDPLType) -> LDPLResult<LDPLType> {
+        Ok(match t {
+            LDPLType::List(inner) | LDPLType::Map(inner) => {
+                return self.scalar_type_of_collection(*inner);
+            }
+            _ => t,
+        })
+    }
+
     /// Find the type for an expression.
     fn type_of_expr(&self, expr: Pair<Rule>) -> LDPLResult<&LDPLType> {
         match expr.as_rule() {
