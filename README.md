@@ -30,8 +30,9 @@ Once you've got them both, installation is a breeze:
 
     cargo install ldpl
 
-You should now have an **ldpl-rs** binary that you can use to compile
-simple LDPL 4.4 programs, like any of the official examples:
+You should now have an **ldpl-rs** binary in your `$PATH` that you can
+use to compile simple LDPL 4.4 programs, like any of the official
+examples:
 
     git clone -b 4.4 git://github.com/lartu/ldpl
     ldpl-rs ldpl/examples/99bottles.ldpl
