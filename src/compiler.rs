@@ -58,6 +58,9 @@ pub struct Compiler {
     /// Compiler flags to build with.
     pub flags: Vec<String>,
 
+    /// Forward function declarations.
+    forwards: Vec<String>,
+
     /// Global variables defined in the DATA: section. Used for error
     /// checking.
     globals: HashMap<String, LDPLType>,
@@ -67,6 +70,9 @@ pub struct Compiler {
 
     /// Sub definitions.
     defs: HashMap<String, bool>,
+
+    /// Path of the file we're currently compiling, if any.
+    path: Option<String>,
 
     /// When a sub is called before it's defined, we stick it in this
     /// list. When it's defined we remove it from the list. If the
@@ -173,8 +179,9 @@ impl fmt::Display for Compiler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}{}{}{}{}{}",
+            "{}{}{}{}{}{}{}",
             CPP_HEADER,
+            self.forwards.join("\n"),
             self.vars.join("\n"),
             self.subs.join("\n"),
             MAIN_HEADER,
@@ -200,10 +207,15 @@ impl Compiler {
     /// Load a file from disk, parse it, and generate C++ code.
     pub fn load_and_compile(&mut self, path: &str) -> LDPLResult<()> {
         // info!("Loading {}", path);
+        let old_path = self.path.clone();
+        self.path = Some(path.to_string());
+
         let source =
             std::fs::read_to_string(&path).map_err(|err| Err(format!("{}: {}", path, err)))?;
         // info!("Parsing {}", path);
-        self.compile(&source)
+        let out = self.compile(&source);
+        self.path = old_path;
+        out
     }
 
     /// Turns a string of LDPL code into C++ code.
@@ -263,11 +275,11 @@ impl Compiler {
         match stmt.as_rule() {
             Rule::include_stmt => {
                 let file = stmt.into_inner().next().unwrap().as_str();
-                self.load_and_compile(unquote(file))?;
+                self.load_and_compile(&self.expand_path(unquote(file)))?;
             }
             Rule::extension_stmt => {
                 let ext_file = unquote(stmt.into_inner().next().unwrap().as_str());
-                self.add_extension(ext_file.into())?;
+                self.add_extension(self.expand_path(ext_file))?;
             }
             Rule::flag_stmt => {
                 let flag = unquote(stmt.into_inner().next().unwrap().as_str());
@@ -668,6 +680,11 @@ impl Compiler {
         } else {
             mangle_sub(ident)
         };
+
+        let fwd_decl = format!("void {}();", mangled);
+        if !self.forwards.contains(&fwd_decl) {
+            self.forwards.push(format!("void {}();", mangled));
+        }
 
         Ok(format!(
             "{}{}",
@@ -1335,6 +1352,21 @@ impl Compiler {
             _ => unexpected!(var),
         }
     }
+
+    /// Expand a relative file path into a full one, based on the
+    /// current file we're compiling.
+    fn expand_path(&self, file: &str) -> String {
+        if let Some(current) = &self.path {
+            if let Some(cwd) = std::path::Path::new(current).parent() {
+                let root = cwd.to_string_lossy();
+                if !root.is_empty() {
+                    return format!("{}/{}", root, file);
+                }
+            }
+        }
+
+        file.to_string()
+    }
 }
 
 /// LDPL Type => C++ Type
@@ -1357,7 +1389,7 @@ fn mangle_var(ident: &str) -> String {
 
 /// Mangle a subprocedure name.
 fn mangle_sub(ident: &str) -> String {
-    format!("SUB_{}", mangle(ident))
+    format!("SUBPR_{}", mangle(ident))
 }
 
 /// Convert an ident to a C++-friendly ident by stripping illegal
