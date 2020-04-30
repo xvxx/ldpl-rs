@@ -397,10 +397,13 @@ impl Compiler {
     }
 
     /// Translate a user-defined STATEMENT into a SUB call.
-    fn compile_user_stmt(&self, pair: Pair<Rule>) -> LDPLResult<String> {
+    fn compile_user_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
         let stmt = pair.as_str();
+        let iter = pair.into_inner();
         let call_parts: Vec<_> = stmt.split(" ").collect();
         let mut args = vec![];
+        let mut matched = false;
+        let mut sub_name = String::new();
 
         'outer: for (pattern, sub) in &self.user_stmts {
             let mut def_parts: Vec<_> = pattern.split(" ").collect();
@@ -411,23 +414,78 @@ impl Compiler {
             }
 
             // compare each word in the pattern
-            for call_part in &call_parts {
+            for (i, call_part) in call_parts.iter().enumerate() {
                 let def_part = def_parts.remove(0); // safe - we checked size
                 if def_part == "$" {
-                    args.push(call_part);
+                    args.push(i);
                 } else if *call_part != def_part {
                     continue 'outer;
                 }
             }
 
             // if we got here, we found a match
-            if !args.is_empty() {
-                todo!();
-            }
-            return emit!("{}();", sub);
+            matched = true;
+            sub_name = sub.clone();
+            break;
+        }
+
+        if matched {
+            let iter = iter
+                .enumerate()
+                .filter(|(i, _rule)| args.contains(i))
+                .map(|(_, rule)| rule);
+            // .collect();
+            let (prefix, args) = self.compile_arg_list(iter)?;
+            return Ok(format!(
+                "{}\n{}",
+                prefix,
+                emit_line!("{}({});", sub_name, args)
+            ));
         }
 
         error!("Unknown statement: {}", stmt)
+    }
+
+    /// Used in CALL and when calling user-defined statements.
+    /// Wants either Pairs<Rule> or an Iterator you built of
+    /// Rule::expr items exclusively. Like from an expr_list.
+    ///
+    /// Returns a tuple of (PREFIX, ARGS) where:
+    /// - PREFIX is the setup code that should be inserted before a
+    ///   function call is made.
+    /// - ARGS are the list of args to be used in the function call,
+    ///   as prepared by PREFIX.
+    fn compile_arg_list<'p, I: Iterator<Item = Pair<'p, Rule>>>(
+        &mut self,
+        mut iter: I,
+    ) -> LDPLResult<(String, String)> {
+        let mut prefix = vec![];
+        let mut args = vec![];
+
+        while let Some(arg) = iter.next() {
+            match arg.as_rule() {
+                Rule::number => {
+                    let var = format!("LPVAR_{}", self.tmp_id);
+                    self.tmp_id += 1;
+                    prefix.push(emit_line!(
+                        "ldpl_number {} = {};",
+                        var,
+                        self.compile_expr(arg)?
+                    ));
+                    args.push(var);
+                }
+                Rule::text | Rule::linefeed => {
+                    let var = format!("LPVAR_{}", self.tmp_id);
+                    self.tmp_id += 1;
+                    prefix.push(emit_line!("chText {} = {};", var, self.compile_expr(arg)?));
+                    args.push(var);
+                }
+                Rule::var => args.push(self.compile_expr(arg)?),
+                _ => unexpected!(arg),
+            }
+        }
+
+        Ok((prefix.join(""), args.join(", ")))
     }
 
     /// Emit a stmt from the PROCEDURE: section of a file or function.
@@ -589,35 +647,7 @@ impl Compiler {
             );
         }
 
-        let mut prefix = vec![];
-        let mut params = vec![];
-
-        while let Some(param) = iter.next() {
-            match param.as_rule() {
-                Rule::number => {
-                    let var = format!("LPVAR_{}", self.tmp_id);
-                    self.tmp_id += 1;
-                    prefix.push(emit_line!(
-                        "ldpl_number {} = {};",
-                        var,
-                        self.compile_expr(param)?
-                    ));
-                    params.push(var);
-                }
-                Rule::text | Rule::linefeed => {
-                    let var = format!("LPVAR_{}", self.tmp_id);
-                    self.tmp_id += 1;
-                    prefix.push(emit_line!(
-                        "chText {} = {};",
-                        var,
-                        self.compile_expr(param)?
-                    ));
-                    params.push(var);
-                }
-                Rule::var => params.push(self.compile_expr(param)?),
-                _ => unexpected!(param),
-            }
-        }
+        let (prefix, params) = self.compile_arg_list(iter)?;
 
         let mangled = if is_extern {
             mangle_extern(ident)
@@ -627,8 +657,8 @@ impl Compiler {
 
         Ok(format!(
             "{}{}",
-            prefix.join(""),
-            emit_line!("{}({});", mangled, params.join(", "))
+            prefix,
+            emit_line!("{}({});", mangled, params)
         ))
     }
 
