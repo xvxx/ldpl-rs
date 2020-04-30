@@ -471,8 +471,17 @@ impl Compiler {
 
     /// Translate a user-defined STATEMENT into a SUB call.
     fn compile_user_stmt(&mut self, pair: Pair<Rule>) -> LDPLResult<String> {
-        let stmt = pair.as_str().to_uppercase();
         let iter = pair.into_inner();
+
+        // we can't just take pair.as_str() because that returns the
+        // trailing comments. maybe a pest bug?
+        let stmt = iter
+            .clone()
+            .map(|part| part.as_str())
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_uppercase();
+
         let types_iter = iter.clone(); // for inferring types of stmt parts
         let call_parts: Vec<_> = stmt.split(" ").map(|p| p.to_uppercase()).collect();
         let mut matched = false;
