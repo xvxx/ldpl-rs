@@ -24,8 +24,7 @@ just fine with regular LDPL extensions.
 ## Building It
 
 LDPL-RS requires **make**, [**cargo**][rustup], and [**Rust**][rustup]
-to build. Once you've built the `ldpl-rs` binary, you will need a
-[**C++ compiler**][cpp-compiler] to build LDPL programs.
+to build, and a [**C++ compiler**][cpp-compiler] to use.
 
 Once you've got all that, building is a breeze:
 
@@ -51,12 +50,14 @@ something else in your `$PATH`.
 
 This project is in its infancy, but can compile simple LDPL programs.
 It supports all LDPL 4.4 statements, including C++ extensions, and
-can compile and run all the examples that shipped with LDPL 4.4.
+can compile and run all the examples that shipped with LDPL 4.4. It
+can also compile [Gild].
 
-It also passes 11 of 12 of the [official LDPL tests][ldpltest].
+It passes 11 of 12 of the [official LDPL tests][ldpltest].
 
-These features are currently unsupported:
+However, these features are currently unsupported:
 
+- [ ] CREATE STATEMENT overloading
 - [ ] nested collections (NUMBER LIST LIST LIST)
 - [ ] OF syntax (LIST OF NUMBERS)
 
