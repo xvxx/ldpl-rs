@@ -5,8 +5,9 @@ authors = ["chris west <c@xvxx.io>"]
 edition = "2018"
 license = "Apache-2.0"
 readme = "README.md"
+description = "LDPL 4.4 compiler in Rust"
 repository = "https://github.com/xvxx/ldpl-rs"
-keywords = ["ldpl", "language"]
+keywords = ["ldpl", "language", "compiler"]
 exclude = [
     "img/*",
 ]
