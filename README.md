@@ -2,6 +2,8 @@
 
 # LDPL in Rust
 
+[![crate](https://img.shields.io/crates/v/ldpl)](https://crates.io/crates/ldpl)
+
 > [LDPL][ldpl] is a powerful compiled programming language designed
 > from the ground up to be excessively expressive, readable, fast
 > and easy to learn. It mimics plain English, in the likeness of the
